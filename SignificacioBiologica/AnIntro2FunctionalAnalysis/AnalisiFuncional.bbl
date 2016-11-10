@@ -1,0 +1,33 @@
+\begin{thebibliography}{1}
+
+\bibitem{Gentleman:2004}
+R.~Gentleman.
+\newblock Using go for statistical analysis.
+\newblock {\em Bioconductor's Compendiums (www.bioconductor.org)}, 2004.
+
+\bibitem{DAVID:2009}
+Da~Wei Huang, Brad~T. Sherman, and Richard~A. Lempicki.
+\newblock Bioinformatics enrichment tools: paths toward the comprehensive
+  functional analysis of large gene lists.
+\newblock 37(1):1--13.
+
+\bibitem{Khatri:2005}
+P.~Khatri and S.~Dr\u{a}ghici.
+\newblock Ontological analysis of gene expression data: current tools,
+  limitations, and problems.
+\newblock {\em Bioinformatics}, 18:3587--3595, 2005.
+
+\bibitem{Khatri:2012}
+Purvesh Khatri, Marina Sirota, and Atul~J. Butte.
+\newblock Ten years of pathway analysis: Current approaches and outstanding
+  challenges.
+\newblock {\em PLoS Comput Biol}, 8(2):e1002375, 02 2012.
+
+\bibitem{GAGE:2009}
+Weijun Luo, Michael~S. Friedman, Kerby Shedden, Kurt~D. Hankenson, and Peter~J.
+  Woolf.
+\newblock {GAGE}: generally applicable gene set enrichment for pathway
+  analysis.
+\newblock 10:161.
+
+\end{thebibliography}

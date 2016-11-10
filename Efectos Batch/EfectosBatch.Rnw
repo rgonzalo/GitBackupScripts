@@ -1,0 +1,378 @@
+\documentclass{article}
+\usepackage{underscore}
+\usepackage[utf8]{inputenc}
+\usepackage{longtable}
+\usepackage[margin=1in]{geometry}
+\usepackage[spanish]{babel}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{fancyvrb}
+\usepackage{anysize}
+\marginsize{3.0cm}{3.5cm}{2.5cm}{2.5cm}
+%\SweaveOpts{echo=false}
+\renewcommand{\baselinestretch}{1.3} % per canviar interlineado
+
+
+\begin{document}
+
+
+
+\title{\begin{figure}[htbp]
+       \centering
+       \includegraphics[width=60mm]{images/UEBblanc.jpg}
+       \includegraphics[width=35mm]{images/IR.jpg}
+       \end{figure}
+       \vspace{1cm}
+       An\'alisis de \\
+       efecto batch
+        \\
+       {\normalsize Marta Ribas\'es - UEB Estudi Id:}\\
+       }
+
+
+%%% incloure el nom de l'analista a mes de l'Alex i seleccionar la unitat
+%\author{Ferran Brians\'{o} and Alex S\`{a}nchez \\ 
+\author{Ricardo Gonzalo, M\'iriam Mota and Alex S\`{a}nchez \\ 
+        Unitat d'Estad\'{i}stica i Bioinform\`{a}tica \\
+        Vall d'Hebron Institut de Recerca (VHIR) \\
+        }
+\maketitle
+\newpage
+
+\tableofcontents
+\newpage
+
+%---------------------------------------------------------------------------------------------------------
+\section{Introducci\'on y objetivos}
+%---------------------------------------------------------------------------------------------------------
+En este trabajo se pretende estudiar el origen y cuantificar la influencia del efecto batch detectado en un estudio de microarrays. El estudio de microarrays pretende comparar la expresión diferencial entre pacientes de ADHD y controles. 
+En marzo de 2014bis los investigadores proporcionaron una nueva base de datos donde se habían corregido las muestras que habían sido sometidas al tratamiento de enriquecimiento en miRNAs.\\
+
+Para ello se tendr\'an en cuenta los siguientes puntos:
+\begin{itemize}
+  \item An\'alisis de componentes principales.
+  \item Estimaci\'on de los pesos de cada variable.
+  \item B\'usqueda de nuevas variables batch.
+\end{itemize}
+
+%Como herramienta de estudio de la posible existencia de efecto batch y su posterior cuantificación, se va a utilizar el \textbf{análisis de componentes principales}, estimaci\'on de los pesos de cada variable y identificaci\'on de posibles variables que expliquen las diferencias. En este caso se trata del estudio sobre \textbf{datos normalizados}.
+
+%---------------------------------------------------------------------------------------------------------
+\section{Datos para el an\'alisis}
+%---------------------------------------------------------------------------------------------------------
+En este caso se utiliza los datos \textbf{normalizados} (y filtrados) obtenidos del \textit{pipeline} est\'andar de an\'alisis de microarrays usado en la UEB. En el archivo \texttt{targets2014bis.csv} se han incluído varias columnas según los factores de los cuales se quiere estudiar su influencia en el efecto batch.
+La variable que se tienen en cuenta en este estudio es la siguientes:
+
+\begin{itemize}
+  \item \texttt{Micros}: kit de extracci\'on de RNA.
+\end{itemize}
+
+No se han tenido en cuenta las parejas de las muestras apareadas ni aquellas muestras en las cuales no se ha aplicado el método d'enriquecimiento para microRNAs.
+
+
+<<echo=FALSE>>=
+require(knitr)
+opts_chunk$set(comment=NA, prompt=TRUE, tidy=FALSE, fig.width=7, fig.height=7,echo=FALSE,message=FALSE,warning=FALSE)
+@
+
+<<package>>=
+library(gmodels)
+require(xtable)
+require(Hmisc)
+require(memisc)
+require(pvca)
+library(Biobase)
+library(pamr)
+library(limma)
+library(sva)
+@
+
+
+<<lecturaDatos,cache=FALSE>>=
+#Preparación directorios
+workingDir <-"/home/rgonzalo/Documents/Estudis/2015-10-MartaRibases-VHIR-BE"
+dataDir <-file.path(workingDir, "/dades")
+resultsDir <- file.path(workingDir, "/results")
+setwd(workingDir)
+
+
+#Lectura de datos
+#x2013 <-read.csv2(file.path(dataDir, "normalized.filtered2013.csv"), row.names=1)
+#x2013<-x2013[,-1]
+#targets2013 <- read.csv2 (file.path(dataDir, "targets2013.csv"),sep="\t",row.names=1)
+#targets2013 <- targets2013[-which(targets2013$Micros == "no"),]
+#sampleNames2013 <- as.character(targets2013$ShortName2)
+#setwd(resultsDir)
+#save(x2013, targets2013, file="dadesNorm2013.Rda")
+
+
+
+#x2014 <- read.csv2(file.path(dataDir, "normalized.filtered2014.csv"), row.names=1)
+#x2014 <- x2014[,-1]
+#targets2014 <- read.csv2 (file.path(dataDir, "targets2014.csv"),sep="\t")
+#targets2014 <- targets2014[-which(targets2014$Micros == "no"),]
+#sampleNames2014 <- as.character(targets2014$ShortName2)
+#setwd(resultsDir)
+#save(x2014, targets2014, file="dadesNorm2014.Rda")
+
+x2014bis <- read.csv2(file.path(dataDir, "normalized.filtered2014bis.csv"), row.names=1)
+x2014bis <- x2014bis[,-1]
+targets2014bis <- read.csv2 (file.path(dataDir, "targets2014bis.csv"),sep="\t")
+sampleNames2014bis <- as.character(targets2014bis$ShortName2)
+setwd(resultsDir)
+save(x2014bis, targets2014bis, file="dadesNorm2014bis.Rda")
+@
+
+
+\newpage
+%---------------------------------------------------------------------------------------------------------
+\section{An\'alisis}
+%---------------------------------------------------------------------------------------------------------
+
+
+%------------------------------------------
+%------------------------------------------
+\subsection{Tabla de frecuencia}
+En este apartado se han realizado tablas de frecuencia para la variable \texttt{Micro} contra nuestra variable de inter\'es \texttt{Grupo} .\\
+
+Si miramos la Tabla \ref{GM} de las muestras a las que se ha hecho enriquecimiento de miRNAs, se observa que ni pacientes ni en controles se encuentra proporcionado. En controles hay el doble de muestras con enriquecimiento que sin él, y en el caso de los pacientes solamente a tres muestras de las 42, a las que se les ha hecho el enriquecimiento.\\
+
+<<tables,results='asis'>>=
+GM <- cbind(table(targets2014bis$Micros,targets2014bis$Grupo))
+#colnames(GG) <- c("ADHD","CTL")
+xtable(GM, caption="Grupo - Micros", label = "GM")
+@
+
+<<tabFreq,results='asis',eval=FALSE>>=
+GGB2013 <- ftable(table(targets2013$Grupo,targets2013$Gender,targets2013$Batch))
+GGB2014 <- ftable(table(targets2014$Grupo,targets2014$Gender,targets2014$Batch))
+
+mytable2013=ftable(GGB2013)
+print(xtable(format(mytable2013),caption="Grupo - Sexo - Batch para 2013"),file="results/mytable2013.tex")
+
+mytable2014=ftable(GGB2014)
+print(xtable(format(mytable2014),caption="Grupo - Sexo - Batch para 2014"),file="results/mytable2014.tex")
+@
+
+%\input{results/mytable2013.tex}
+%\input{results/mytable2014.tex}
+
+\clearpage
+%------------------------------------------
+%------------------------------------------
+\subsection{An\'alisis de componentes principales}
+<<funPCA>>=
+#Definición de la función de PCA-2d
+#vigilar los "ylim". Habría que definirlos en cada caso
+plotPCA <- function ( X, labels=NULL, colors=NULL, var = "",dataDesc="", scale=FALSE, formapunts=NULL, myCex=NULL,...)
+{
+  pcX<-prcomp(t(X))
+  loads<- round(pcX$sdev^2/sum(pcX$sdev^2)*100,1)
+  xlab<-c(paste("PC1",loads[1],"%"))
+  ylab<-c(paste("PC2",loads[2],"%"))
+ if (is.null(colors)) colors=colores
+  plot(pcX$x[,1:2],xlab=xlab,ylab=ylab,
+        xlim=c(min(pcX$x[,1])-5,max(pcX$x[,1])+5),ylim=c(-35,50),pch=formapunts, col=colors)
+        text(pcX$x[,1],pcX$x[,2],labels,pos=3,cex=myCex, col=colors)
+  title(paste(var, dataDesc, sep=" "), cex=0.2)
+}
+@
+
+En este apartado se ha realizado un gráfico de los dos primeros componentes principales de un análisis PCA, dada la naturaleza del método PCA, la separación entre las muestras a lo largo del eje de coordenadas X suele ser más significativo que a lo largo del eje Y debido a que el primer componente explica más que el segundo componente, que explica más que el tercero y así sucesivamente.\\
+
+%------------------------------------------
+\subsubsection{Análisis de componentes principales según \textit{Enriquecimiento miRNA}. }
+<<grupo,results='hide'>>=
+setwd(resultsDir)
+forma2014bis <- as.numeric(targets2014bis$ColMicros)
+colores2014bis <- as.character(targets2014bis$ColMicros)
+forma<-c(1,2)
+
+pdf("PCA2dGroupNorm2014bis.pdf")
+#par(mfrow=c(1,2))
+plotPCA(X=x2014bis, labels=sampleNames2014bis, dataDesc="",var = "Enriquecimiento miRNA", myCex=0.6, colors = colores2014bis,formapunts=forma2014bis)
+legend("topleft", c("SI","NO"), col=c("blue","red"),pch=forma)
+dev.off()
+@
+\begin{figure}[ht]
+\centering
+\includegraphics[width=110mm]{results/PCA2dGroupNorm2014bis.pdf}
+  \caption{\label{pcaG}{\textbf{PCA.} En este gráfico se puede observar que las muestras se separan casi perfectamente (a excepción de cuatro) según si han sido enriquecidas para miRNAs o no, independientemente de si proceden de controles o de pacientes. Aún así como se han comentado existen cuatro muestras (\textit{C52, C5, D31 Y D16}) que aún no habiendo sido enriquecidas en miRNAs se agrupan en el grupo de las tratadas. Cabe destacar el disminuido porcentaje de variabilidad explicada por cada una de las componentes, la primera no llega al 14\% y la segunda se queda en 11.5\%}}
+\end{figure}
+\clearpage
+%------------------------------------------
+
+\subsection{PCVA}
+En este apartado se ha usado el paquete \textit{PVCA} de \textit{Bioconductor}, el cual combina dos m\'etodos com\'unmente usados, el an\'alisis de componentes principales (PCA) y el an\'alisis de componentes de la varianza. Con esto podemos determinar cuales son las fuentes de variaci\'on que m\'as afectan, cuantificando la proporcion de variabilidad explicada por cada variable.
+
+\begin{figure}[ht]
+\centering
+<<pvca2014bis,cache=TRUE>>=
+## 2014bis
+setwd(workingDir)
+load("dades/normalizedData2014bis.Rda")
+pData(my.norm) <- targets2014bis
+pct_threshold <- 0.6
+batch.factors <- c("Grupo", "Batch","Gender","Micros","Ficoll")
+pvcaObj <- pvcaBatchAssess (my.norm, batch.factors, pct_threshold)
+
+bp <- barplot(pvcaObj$dat, xlab = "Effects",
+ylab = "Weighted average proportion variance",
+ylim= c(0,1.1),col = c("blue"), las=2,
+main="PVCA estimation bar chart (2014bis)")
+axis(1, at = bp, labels = pvcaObj$label, xlab = "Effects", cex.axis = 0.7, las=2)
+values = pvcaObj$dat
+new_values = round(values , 3)
+text(bp,pvcaObj$dat,labels = new_values, pos=3, cex = 0.8)
+@
+\caption{\label{pvca2014bis}{Gr\'afico de barras de los pesos de las posibles fuentes batch de los datos 2014bis}}
+\end{figure}
+Como se observa en la figura \ref{pvca2014bis} la variable \textit{Micros} es la que explica más variabilidad de todas las que se han utilizado en el modelo. De todas maneras sigue quedando una gran cantidad (66.9\%)de variabilidad sin explicar.
+
+\clearpage
+
+%------------------------------------------
+%------------------------------------------
+\subsection{Surrogate Variable Analysis (SVA)}
+En este apartado mediante el paquete \textit{SVA} de \textit{Bioconductor}, se ha realizado un análisis de variables latentes. En el cual se busca identificar y estimar las  variables latentes que puedan explicar la variabilidad que no explican nuestras variables (resid en los gráficos del apartado anterior).\\
+
+\textit{Una vez realizado el análisis, no se han encontrado variables latentes significativas en el estudio.}
+<<sva,results='hide'>>=
+#####################################################################################
+#####################################################################################
+setwd(workingDir)
+load("dades/normalizedData2014bis.Rda")
+pData(my.norm) <- targets2014bis 
+
+##########################################
+### Tenim en compte totes les variables 
+##########################################
+##### Setting up the data from an ExpressionSet
+rownames(phenoData(my.norm)) <- pData(my.norm)[,1]
+pheno <- pData(my.norm)
+#edata <- exprs(my.norm)[,rownames(pheno)]
+edata <- exprs(my.norm)
+mod <- model.matrix ( ~ as.factor(Grupo) + as.factor(Gender) + as.factor(Batch) + as.factor(Micros), data = pheno) ## Totes les variables
+#dimnames(mod)[[1]] <-  pData(my.norm)[,1]
+mod0 <- model.matrix( ~ as.factor(Gender) + as.factor(Batch) + as.factor(Gender) + as.factor(Micros), data = pheno) ## Variables que poden afectar sense la nostre variable d'interes
+
+##### Estimem diferents Batch
+## First it identifies the number of latent factors that need to be estimate
+n.sv = num.sv(edata,mod,method="leek")
+n.sv                                  ## 0
+## Estimate surrogate variables
+svobj = sva(edata,mod,mod0,n.sv=n.sv)
+@
+
+<<sva2,eval=FALSE>>=
+##########################################
+### Només tenim en compte variable interes 
+##########################################
+#mod <- model.matrix ( ~ as.factor(Grupo) , data = pheno) ## Totes les variables
+#dimnames(mod)[[1]] <-  pData(my.norm)[,1]
+#mod0 <- model.matrix( ~ 1, data = pheno) ## Variables que poden afectar sense la nostre variable d'interes
+
+
+##### Estimem diferents Batch
+## First it identifies the number of latent factors that need to be estimate
+#n.sv = num.sv(edata,mod,method="leek")
+#n.sv                                  ## 3
+## estimate surrogate variables
+#svobj = sva(edata,mod,mod0,n.sv=n.sv)
+
+
+##### Adjusting for surrogate variables using the f.pvalue function
+#pValues = f.pvalue(edata,mod,mod0)
+#(sum(pValues < 0.01)/length(pValues))*100 ## percentatge p.valors significatius
+#qValues = p.adjust(pValues,method="BH")
+#(sum(qValues < 0.01)/length(qValues))*100 ## percentatge p.val.adj significatius
+
+#modSv = cbind(mod,svobj$sv)
+#mod0Sv = cbind(mod0,svobj$sv)
+#pValuesSv = f.pvalue(edata,modSv,mod0Sv)    ## p.value surrogate variables
+#qValuesSv = p.adjust(pValuesSv,method="BH") ## p.val.adj surrogate variables
+
+
+##### Adjusting for surrogate variables using the limma package
+#fit = lmFit(edata,modSv)
+#contrast.matrix <- cbind("C1"=c(-1,1,0,rep(0,svobj$n.sv)),"C2"=c(0,-1,1,rep(0,svobj$n.sv)))
+#fitContrasts = contrasts.fit(fit,contrast.matrix)
+
+
+##### Applying the ComBat function to adjust for known batches
+batch = c(pheno$Gender,pheno$Batch)
+modcombat = model.matrix(~1, data=pheno)
+
+## matriu d'expresions ajustada per variables batch
+combat_edata = ComBat(dat=edata, batch=batch, mod=modcombat, numCovs=NULL, par.prior=TRUE,prior.plots=TRUE)
+
+pValuesComBat = f.pvalue(combat_edata,mod,mod0)
+qValuesComBat = p.adjust(pValuesComBat,method="BH")
+
+modBatch <- model.matrix(~ as.factor(Grupo) + as.factor(Batch) + as.factor(Gender), data=pheno)
+mod0Batch <- model.matrix (~ as.factor(Batch) + as.factor(Gender), data=pheno)
+pvaluesBatch <- f.pvalue(edata, modBatch,mod0Batch)
+qvaluesBatch <- p.adjust(pvaluesBatch, method="BH")
+##########################################
+### Només tenim en compte variable interes 
+##########################################
+#mod <- model.matrix ( ~ as.factor(Grupo) , data = pheno) ## Totes les variables
+#dimnames(mod)[[1]] <-  pData(my.norm)[,1]
+#mod0 <- model.matrix( ~ 1, data = pheno) ## Variables que poden afectar sense la nostre variable d'interes
+
+
+##### Estimem diferents Batch
+## First it identifies the number of latent factors that need to be estimate
+#n.sv = num.sv(edata,mod,method="leek")
+#n.sv                                  ## 1
+## estimate surrogate variables
+#svobj = sva(edata,mod,mod0,n.sv=n.sv)
+
+
+##### Adjusting for surrogate variables using the f.pvalue function
+#pValues = f.pvalue(edata,mod,mod0)
+#(sum(pValues < 0.01)/length(pValues))*100 ## percentatge p.valors significatius
+#qValues = p.adjust(pValues,method="BH")
+#(sum(qValues < 0.01)/length(qValues))*100 ## percentatge p.val.adj significatius
+
+#modSv = cbind(mod,svobj$sv)
+#mod0Sv = cbind(mod0,svobj$sv)
+#pValuesSv = f.pvalue(edata,modSv,mod0Sv)    ## p.value surrogate variables
+#qValuesSv = p.adjust(pValuesSv,method="BH") ## p.val.adj surrogate variables
+
+
+##### Adjusting for surrogate variables using the limma package
+#fit = lmFit(edata,modSv)
+#contrast.matrix <- cbind("C1"=c(-1,1,0,rep(0,svobj$n.sv)),"C2"=c(0,-1,1,rep(0,svobj$n.sv)))
+#fitContrasts = contrasts.fit(fit,contrast.matrix)
+
+
+##### Applying the ComBat function to adjust for known batches
+batch = c(pheno$Gender,pheno$Batch,pheno$Ficoll)
+modcombat = model.matrix(~1, data=pheno)
+
+## matriu d'expresions ajustada per variables batch
+combat_edata = ComBat(dat=edata, batch=batch, mod=modcombat, numCovs=NULL, par.prior=TRUE)
+
+pValuesComBat = f.pvalue(combat_edata,mod,mod0)
+qValuesComBat = p.adjust(pValuesComBat,method="BH")
+@
+
+%---------------------------------------------------------------------------------------------------------
+\section{Conclusiones}
+%---------------------------------------------------------------------------------------------------------
+En el presente análisis se ha observado lo siguiente:
+\begin{itemize}
+  \item Se observa que el protocolo de enriquecimiento en miRNAs no se ha aplicado a todos los grupos por igual, ya que solamente en tres de los cuarenta y dos pacientes se ha aplicado.
+  
+  \item En el análisis de componentes principales, se observa que las muestras se separan casi perfectamente en dos grupos: las que se han enriquecido en miRNA frente a las que no se han enriquecido. Curiosamente existen cuatro muestras que no se han enriquecido en miRNAs que se agrupan como si lo hubieran estado.
+
+\item Al estimar los pesos de cada variable, se observa que la variable \textit{Enriquecimiento por miRNA} explica un 17\% de la variabilidad, siendo la que más explica de todas las informadas por los investigadores. Aún así queda un porcentaje muy alto de variabilidad para explicar no explicado por las variables tenidas en cuenta durante el análisis.
+
+\item Por último, se ha buscado encontrar variables que explicaran este alto porcentaje pero no se ha encontrado ninguna variable latente significativa.
+\end{itemize}
+
+
+
+
+\end{document}

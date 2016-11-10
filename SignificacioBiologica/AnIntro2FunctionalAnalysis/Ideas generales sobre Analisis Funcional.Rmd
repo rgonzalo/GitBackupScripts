@@ -1,0 +1,29 @@
+---
+title: "Un pipe-line de analisis funcional"
+author: "Alex Sanchez"
+date: "18/03/2016"
+output: pdf_document
+---
+# Introducción
+
+"Análisis funcional" es un término general para describir los análisis realizados sobre listas de genes o matrices de expresion encaminados a aumentar la interpretabilidad biológica de los resultados.
+
+Estos análisis conllevan diversos problemas
+
+- Por un lado existen gran diversidad de métodos que dan lugar a resultados distintos, desde categorías de funciones a redes o pathways
+- Aún en los casos en que los resultados sean del mismo tipo la coincidencia puede ser baja
+
+En vista de ésto una aproximación razonable puede ser utilizar varios métodos sobre los mismos datos y buscar un consenso entre los distintos resultados.
+
+Esto puede hacerse con relativa facilidad si se tiene en cuenta que dentro de Bioconductor existen multitud de métodos de análisis funcional.
+
+La presentación de Martin Morgan adjunta los clasifica en al menos 6 categorías.
+
+La idea sería
+
+- Seleccionar al menos un paquete de las categorías que consideremos
+- Preparar un pipeline que a partir de un input típico para estos casos (lista de genes/matriz de expresión) sea capaz de 
+    + Ejecutar los métodos seleccionados sobre el input comun
+    + Presentar los resultados de forma que se facilite su comparación / integración.
+    
+    

@@ -1,0 +1,98 @@
+---
+title: "Preparacó de les dades (estudi B2326)"
+author: "ferran.brianso@vhir.org"
+date: "11 de octubre de 2016"
+output: html_document
+---
+
+Script per a preparacio de la matriu d'expressio (Cts) a partir de fitxers (.txt) separats que ens han passat els investigadors en l'estudi B2326 (RTqPCR en miRNA de 28 mostres).
+
+Abans de res, definim els directoris i fitxers de treball
+```{r}
+dataDir <- paste(getwd(), "dades", sep = "/")
+miRNA.file <- "docs/miRNAs_list.txt"
+```
+
+Llegim les dades tots els fitxers csv, donant per fet que segueixen un mateix format, i les guardem en una matriu on a cada columna hi aniran els Cts d'una mostra diferent
+```{r}
+## Tenim counts per mostra en fitxers separats, que cal llegir i ajuntar en una mateixa taula
+## Llegir tots les mostres en serie:
+for (i in 1:length(list.files(path = dataDir))){
+  print(list.files(path = dataDir)[i])
+  data <- read.table(file=file.path(dataDir, list.files(path = dataDir)[i]), skip = 2, 
+                     header=TRUE, sep=",", dec=".")
+  #data <- data[order(data$Well),]
+  if (i==1){
+    Cts <- as.matrix(data$Ct)
+    rownames(Cts) <- data$Well
+    colnames(Cts) <- substr(list.files(path = dataDir)[i], 1, 5)
+    print(tail(Cts))
+  }
+  else{
+    Cts <- cbind(Cts, as.matrix(data$Ct))
+    colnames(Cts)[i] <- substr(list.files(path = dataDir)[i], 1, 5)
+    print(tail(Cts))
+  }
+}
+dim(Cts)
+#class(Cts)
+```
+
+Llegim els noms dels miRNA de la llista corresponent i els afegim com a rownames de la matriu
+```{r}
+## Llegir la llista de noms (han de ser 96)
+miRNames <- read.table(miRNA.file, header = FALSE, sep = "\t")$V1 # agafem la primera columna perque ens quedi un vector
+
+## I afegir-la com a noms de files de la matriu de Cts
+rownames(Cts) <- miRNames
+head(Cts)
+tail(Cts)
+```
+
+Finalment, guardem la matriu com a objecte de dades d'R i com a taula csv completa
+```{r}
+## com a R data
+save(Cts, file = "rawCts.RData")
+## com a taula csv
+newCts <- cbind(rownames(Cts), Cts)
+colnames(newCts)[1] <- "detector"
+#head(newCts)
+write.table(newCts, file = "rawCts.csv", quote = FALSE, 
+            sep="\t", dec=".", row.names = FALSE, col.names = TRUE)
+
+```
+
+
+Definim les matrius per mostra i per detector, per poder aprofitar el codi de l'estudi de l'A.Meseguer
+```{r}
+cts.bySamp <- as.matrix(Cts)
+cts.byGene <- t(as.matrix(Cts))
+```
+
+Donem un cop d'ull a les dades per cada mostra
+```{r}
+summary(cts.bySamp)
+## definim colors a mida
+#samp.col <- as.character(targets$Colores)
+samp.col <- rep("green", dim(cts.bySamp)[2])
+## fem grafiques de Ct (40-Ct i SD potser no cal)
+boxplot(cts.bySamp, las = 2, col = samp.col, main = "Raw Ct values by sample")
+#legend("bottom", legend = unique(targets$Grup), fill = as.character(unique(targets$Colores)))
+```
+
+Donem un cop d'ull a les dades per cada gen
+```{r}
+summary(cts.byGene)
+# definim colors a mida
+gene.col = c(rainbow(dim(cts.byGene)[2]+8)) # el +8 es tema estetic
+# fem grafiques de Ct, mean(40-Ct) i SD
+boxplot(cts.byGene, las = 2, col = gene.col, main = "Raw Ct values by gene")
+barplot(40-apply(cts.byGene, 2, mean), las = 2, col = gene.col, main = "Raw expression (Mean 40-Ct values) by gene")
+barplot(apply(cts.byGene, 2, sd), las = 2, col = gene.col, main = "StDev by gene")
+# fem tambe grafica de CV
+gene.sd <- apply(cts.byGene, 2, sd)
+gene.mean <- apply(cts.byGene, 2, mean)
+barplot(gene.sd/gene.mean, las = 2, col = gene.col, main = "CV by gene")
+abline(h = 0.03, lty = 2)
+```
+

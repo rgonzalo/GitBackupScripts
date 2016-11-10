@@ -1,0 +1,457 @@
+---
+title: "Revisio Estudi ID#228 (Anna Meseguer)"
+author: "ferran.brianso@vhir.org"
+date: "6 de octubre de 2016"
+output: 
+  html_document:
+    toc: true
+    theme: united
+---
+
+Re-anàlisi de les dades de RTqPCR (procedents de la 7900 de la UAT) d'un estudi previ fet entre finals de 2011 i principis de 2012. Per a més detalls, consultar la documentació associada a l'estudi **ID#228** (de primavera de 2012).
+
+# Primera prova amb les dades de teixit adipós 
+En aquest cas, carregarem totes les dades de la 2a part de l'estudi, però treballarem sols amb les mostres de teixit adipós
+
+## Carreguem i comprovem les dades
+Llegim primer els valors de Ct originals
+```{r}
+dades <- read.table("newCTs_part2.txt", header = TRUE, sep = "\t", dec=",")
+head(dades)
+tail(dades)
+dim(dades)
+```
+
+I després la info de les mostres
+```{r}
+targets <- read.table("targets.revisio.part2.txt", header = TRUE, sep = "\t")
+show(targets)
+dim(targets)
+```
+
+Mirem concordança entre mostres:
+```{r}
+cts <- dades[ ,-c(1,2,33)] ## no em quedo les columnes de Assay, type ni la última mostra (calibradora)
+dim(cts)
+colnames(cts)
+which(targets$SampleName %in% colnames(cts))
+length(which(targets$SampleName %in% colnames(cts)))==length(colnames(cts))
+```
+
+### Donem format a les dades per treballar
+Formatem la taula de valors de Cts com a matriu amb les corresponents etiquetes de fila (noms dels gens)
+```{r}
+## primer posem etiquetes de gens
+gene.names <- sapply(strsplit(as.character(dades$Assay), "-"), "[[", 1)
+rownames(cts) <- gene.names
+## i dps transformem a matriu (transposada)
+cts.bySamp <- as.matrix(cts)
+cts.byGene <- t(as.matrix(cts))
+#show(mcts)
+```
+
+## Pre-processat de les dades
+
+### Fem anàlisi exploratori global (per mostra)
+Donem un cop d'ull a les dades per cada mostra
+```{r}
+summary(cts.bySamp)
+## definim colors a mida
+samp.col = as.character(targets$Colores)
+## fem grafiques de Ct (40-Ct i SD potser no cal)
+boxplot(cts.bySamp, las = 2, col = samp.col, main = "Raw Ct values by sample")
+legend("bottom", legend = unique(targets$Grup), fill = as.character(unique(targets$Colores)))
+#barplot(40-apply(cts.bySamp, 2, mean), las = 2, col = samp.col, main = "Raw expression (Mean 40-Ct values) by sample")
+#legend("right", legend = unique(targets$Grup), fill = as.character(unique(targets$Colores)))
+#barplot(apply(cts.bySamp, 2, sd), las = 2, col = samp.col, main = "StDev by sample")
+#legend("right", legend = unique(targets$Grup), fill = as.character(unique(targets$Colores)))
+```
+
+### Fem anàlisi exploratori global (per gen)
+Donem un cop d'ull a les dades per cada gen
+```{r}
+summary(cts.byGene)
+# definim colors a mida
+gene.col = c("gray",rainbow(dim(cts.byGene)[2]+8)) # el +8 es tema estetic
+# fem grafiques de Ct, mean(40-Ct) i SD
+boxplot(cts.byGene, las = 2, col = gene.col, main = "Raw Ct values by gene")
+barplot(40-apply(cts.byGene, 2, mean), las = 2, col = gene.col, main = "Raw expression (Mean 40-Ct values) by gene")
+barplot(apply(cts.byGene, 2, sd), las = 2, col = gene.col, main = "StDev by gene")
+# fem tambe grafica de CV
+gene.sd <- apply(cts.byGene, 2, sd)
+gene.mean <- apply(cts.byGene, 2, mean)
+barplot(gene.sd/gene.mean, las = 2, col = gene.col, main = "CV by gene")
+abline(h = 0.03, lty = 2)
+```
+
+### Normalitzem les dades
+Sembla que podríem normalitzar pel gen *18S*, però optem per seguir el mateix criteri que per l'anàlisi de 2012: normalitzar respecte a l'expressió del gen *Ppia*, que resulta ser dels més constants i ja era un candidat a endogen. 
+Això vol dir que calculem els dCts (delta Cts) restant a cada gen el Ct del gen Ppia de la seva mateixa mostra.
+```{r}
+## fem servir el vector de valors endogens que tingui el nostre gen
+endo.vals <- as.numeric(cts['Ppia',])
+## per operar amb la funcio sweep sobre les columnes de la matriu de cts, 
+## restant els endo.vals de cada columna
+dCts <- sweep(as.matrix(cts), 2, endo.vals, "-")
+show(dCts)
+```
+Com veiem, la fila del gen *Ppia* ha de quedar a 0, i la resta normalitzades.
+Ara, retirem els valors de Ppia de la taula de dades normalitzada (ja que sempre conté 0).
+```{r}
+## retirem el gen Ppia de la matriu de dades (ja que tot val 0)
+dim(dCts)
+dCts <- dCts[-which(rownames(dCts)=="Ppia"), ]
+dim(dCts)
+```
+
+### Fem anàlisi exploratori per mostra dels valors normalitzats
+Donem un cop d'ull a les dades normalitzades per mostra
+```{r}
+summary(dCts)
+## definim colors a mida
+samp.col = as.character(targets$Colores)
+## i fem grafiques de dCt
+boxplot(dCts, las = 2, col = samp.col, main = "deltaCt (normalized) values by sample")
+legend("bottom", legend = unique(targets$Grup), fill = as.character(unique(targets$Colores)))
+```
+
+### Fem anàlisi exploratori per gen dels valors normalitzats
+Donem un cop d'ull a les dades normalitzades per cada gen
+```{r}
+dCts.byGene <- t(dCts)
+summary(dCts.byGene)
+## definim de nou la paleta de colors
+gene.col = c(rainbow(dim(dCts.byGene)[2]+8)) # el +8 es tema estetic
+## i fem grafiques de dCt i mean(25-dCt)
+boxplot(dCts.byGene, las = 2, col = gene.col, main = "deltaCt values by gene")
+barplot(25-apply(dCts.byGene, 2, mean), las = 2, col = gene.col, main = "Normalized expression (Mean 25-dCt values) by gene")
+```
+
+# Comparacions per trobar expressió diferencial
+
+## Definim les comparacions
+Comparació 1: TG_CHOW vs WT_CHOW en adipós, que és TG_CHOW - WT_CHOW
+
+Comparació 2: WT_HFD vs WT_CHOW en adipós, que és WT_HFD - WT_CHOW
+
+Comparació 3: TG_HFD vs WT_HFD en adipós, que és TG_HFD - WT_HFD
+
+Comparació 4: TGvsWT_HFDvsCHOW en adipós, que equival a (TG_HFD - WT_HFD) - (TG_CHOW - WT_CHOW)
+
+## Comparacio 1: TG_CHOW vs WT_CHOW
+Volem obtenir resultats de la primera comparació: TG_CHOW vs WT_CHOW en adipós.
+Per això, calcularem els ddCt de cada gen, segons el mètode Livak, restant de cada valor dCts dels gens a les mostres TG_CHOW(test) la mitjana dels dCts del mateix gen a les mostres WT_CHOW(control). 
+
+Primer doncs, calculem les mitjanes per gen del grup control
+```{r}
+## mirem quines mostres estan implicades
+which(targets$Grup == "WT_CHOW")
+
+## calculem la mitjana dels controls (WT.CHOW en aquest cas) per cada gen
+dCts[ , which(targets$Grup == "WT_CHOW")]
+mean.WT.CHOW <- apply(dCts[ , which(targets$Grup == "WT_CHOW")], 1, mean)
+mean.WT.CHOW
+```
+
+després, calculem les ddCts de les mostres TG_CHOW restant la mitjana de cada gen control obtinguda just abans
+```{r}
+## mirem quines mostres estan implicades
+which(targets$Grup == "TG_CHOW")
+
+## calculem el doble delta Ct de cada gen en la comparacio TG.CHOW - WT.CHOW
+dCts["Lep" , which(targets$Grup == "TG_CHOW")] ## cas de la Leptina a mode d'exemple
+mean.WT.CHOW["Lep"] ## cas de la Leptina a mode d'exemple
+ddCts.TGvsWT.CHOW <- dCts[ , which(targets$Grup == "TG_CHOW")] - mean.WT.CHOW
+```
+
+i procedim a fer els gràfics corresponents pels ddCts
+```{r}
+## definim de nou la paleta de colors
+gene.col = c(rainbow(dim(dCts.byGene)[2]+8)) # el +8 es tema estetic
+## i fem grafiques de ddCt
+boxplot(t(ddCts.TGvsWT.CHOW), las = 2, col = gene.col, main = "ddCt values by gene in TG.CHOW - WT.CHOW")
+abline(h = 0, lty = 2)
+mean.ddCts.TGvsWT.CHOW <- apply(ddCts.TGvsWT.CHOW, 1, mean)
+sd.ddCts.TGvsWT.CHOW <- apply(ddCts.TGvsWT.CHOW, 1, sd)
+plot(1:length(row.names(ddCts.TGvsWT.CHOW)), mean.ddCts.TGvsWT.CHOW, xaxt='n', 
+     pch=15, col = gene.col, main = "Mean ddCt values by gene in TG.CHOW - WT.CHOW", 
+     ylab = "Mean ddCt (+/-SD)", xlab="", ylim = c(-5,7))
+axis(1, at = 1:length(row.names(ddCts.TGvsWT.CHOW)), labels = row.names(ddCts.TGvsWT.CHOW), las = 2)
+arrows(1:length(row.names(ddCts.TGvsWT.CHOW)), mean.ddCts.TGvsWT.CHOW-sd.ddCts.TGvsWT.CHOW, 
+       1:length(row.names(ddCts.TGvsWT.CHOW)), mean.ddCts.TGvsWT.CHOW+sd.ddCts.TGvsWT.CHOW, 
+       length=0.05, angle=90, code=3)
+abline(h = 0, lty = 2)
+```
+
+Fem els test per veure si els dCts dels grups de la comparació són o no diferents (que equival a veure si els ddCts son o no 0, ja que A==B es pot veure com A-B==0).
+I aprofitem el loop per registrar els resultats de mean(ddCt), FoldChange (=RQ, =2^-ddCt), i p-valor de cada gen per a aquesta comparació.
+```{r}
+## definim els RQs i muntem la taula de resultats (top table)
+RQs <- 2^-mean.ddCts.TGvsWT.CHOW
+genes <- gene.names[-which(gene.names=="Ppia")]
+topTab <- data.frame(gene=genes, ddCt=mean.ddCts.TGvsWT.CHOW, FC=RQs, pVal=rep(NA,length(genes)))
+#topTab
+
+## donem un cop d'ull als valors a comparar
+dCts["Lep" , which(targets$Grup == "TG_CHOW")]
+dCts["Lep" , which(targets$Grup == "WT_CHOW")]
+## i fem el loop del test de wilcoxon per comparacio de mitjanes per obtenir els p-valors
+for (i in 1:nrow(dCts)){
+  res <- wilcox.test(dCts[i , which(targets$Grup == "TG_CHOW")], 
+              dCts[i , which(targets$Grup == "WT_CHOW")],
+              paired = FALSE)
+  topTab[i,"pVal"] <- res$p.value
+}
+sortTab <- topTab[with(topTab, order(pVal)), ]
+show(sortTab)
+## i exportem la taula a fitxer csv
+write.table(sortTab, file = "topTab_comp1_TGvsWT.CHOW.csv", 
+            sep = "\t", dec = ".", row.names = FALSE, col.names = TRUE, quote = FALSE)
+```
+
+Per acabar, grafiquem els RQ
+```{r echo=FALSE}
+## fer el grafic
+plot(1:length(names(RQs)), RQs, xaxt='n', log = "y", ylim = c(0.1, 10), 
+     pch=15, col = gene.col, main = "FoldChange(2^-ddCt) by gene in TG.CHOW - WT.CHOW", 
+     ylab = "FoldChange (= 2^-ddCt)", xlab="")
+abline(h = 1, lty = 2)
+axis(1, at = 1:length(row.names(ddCts.TGvsWT.CHOW)), labels = row.names(ddCts.TGvsWT.CHOW), las = 2)
+arrows(1:length(names(RQs)), RQs, 
+       1:length(names(RQs)), 1, 
+       length=0, lwd = 5, col = gene.col, angle=90, code=3)
+pos.x <- which(topTab$pVal<0.05 & topTab$ddCt<0) # els de ddCt negatiu seran els de FC positiu
+neg.x <- which(topTab$pVal<0.05 & topTab$ddCt>0) # els de ddCt negatiu seran els de FC negatiu
+pos.y <- RQs[pos.x]+0.5
+neg.y <- RQs[neg.x]-0.5
+if (length(pos.x)>0) {text(pos.x, y = pos.y, "*")}
+if (length(neg.x)>0) {text(neg.x, y = neg.y, "*")}
+## i exportar-lo
+png("FCbyGene_comp1.png")
+  plot(1:length(names(RQs)), RQs, xaxt='n', log = "y", ylim = c(0.1, 10), 
+       pch=15, col = gene.col, main = "FoldChange(2^-ddCt) by gene in TG.CHOW - WT.CHOW", 
+       ylab = "FoldChange (= 2^-ddCt)", xlab="")
+  abline(h = 1, lty = 2)
+  axis(1, at = 1:length(row.names(ddCts.TGvsWT.CHOW)), labels = row.names(ddCts.TGvsWT.CHOW), las = 2)
+  arrows(1:length(names(RQs)), RQs, 
+         1:length(names(RQs)), 1, 
+         length=0, lwd = 5, col = gene.col, angle=90, code=3)
+  if (length(pos.x)>0) {text(pos.x, y = pos.y, "*")}
+  if (length(neg.x)>0) {text(neg.x, y = neg.y, "*")}
+dev.off()
+```
+En aquest cas, tenim `r length(pos.x)` gens significatius (a 0.05) amb major expressió a TG.HFD que en WT.HFD (els casos amb ddCt negatiu), i `r length(neg.x)` casos significatius amb menor expressió.
+
+## Comparacio 2: WT_HFD vs WT_CHOW
+Volem obtenir resultats de la segona comparació: WT_HFD vs WT_CHOW en adipós.
+Per això, calcularem els ddCt de cada gen, segons el mètode Livak, restant de cada valor dCts dels gens a les mostres WT_HFD(test) la mitjana dels dCts del mateix gen a les mostres WT_CHOW(control). 
+
+Primer doncs, calculem les mitjanes per gen del grup control
+```{r}
+## mirem quines mostres estan implicades
+which(targets$Grup == "WT_CHOW")
+
+## calculem la mitjana dels controls (WT.CHOW en aquest cas) per cada gen
+dCts[ , which(targets$Grup == "WT_CHOW")]
+mean.WT.CHOW <- apply(dCts[ , which(targets$Grup == "WT_CHOW")], 1, mean)
+mean.WT.CHOW
+```
+
+després, calculem les ddCts de les mostres WT_HFD restant la mitjana de cada gen control obtinguda just abans
+```{r}
+## mirem quines mostres estan implicades
+which(targets$Grup == "WT_HFD")
+
+## calculem el doble delta Ct de cada gen en la comparacio WT.HFD - WT.CHOW
+dCts["Apln" , which(targets$Grup == "WT_HFD")] ## cas de la Apelina a mode d'exemple
+mean.WT.CHOW["Apln"] ## cas de la Apelina a mode d'exemple
+ddCts.WT.HFDvsCHOW <- dCts[ , which(targets$Grup == "WT_HFD")] - mean.WT.CHOW
+```
+
+i procedim a fer els gràfics corresponents pels ddCts
+```{r}
+## definim de nou la paleta de colors
+gene.col = c(rainbow(dim(dCts.byGene)[2]+8)) # el +8 es tema estetic
+## i fem grafiques de ddCt
+boxplot(t(ddCts.WT.HFDvsCHOW), las = 2, col = gene.col, main = "ddCt values by gene in WT.HFD - WT.CHOW")
+abline(h = 0, lty = 2)
+mean.ddCts.WT.HFDvsCHOW <- apply(ddCts.WT.HFDvsCHOW, 1, mean)
+sd.ddCts.WT.HFDvsCHOW <- apply(ddCts.WT.HFDvsCHOW, 1, sd)
+plot(1:length(row.names(ddCts.WT.HFDvsCHOW)), mean.ddCts.WT.HFDvsCHOW, xaxt='n', 
+     pch=15, col = gene.col, main = "Mean ddCt values by gene in WT.HFD - WT.CHOW", 
+     ylab = "Mean ddCt (+/-SD)", xlab="", ylim = c(-5,7))
+axis(1, at = 1:length(row.names(ddCts.WT.HFDvsCHOW)), labels = row.names(ddCts.WT.HFDvsCHOW), las = 2)
+arrows(1:length(row.names(ddCts.WT.HFDvsCHOW)), mean.ddCts.WT.HFDvsCHOW-sd.ddCts.WT.HFDvsCHOW, 
+       1:length(row.names(ddCts.WT.HFDvsCHOW)), mean.ddCts.WT.HFDvsCHOW+sd.ddCts.WT.HFDvsCHOW, 
+       length=0.05, angle=90, code=3)
+abline(h = 0, lty = 2)
+```
+
+Fem els test per veure si els dCts dels grups de la comparació són o no diferents (que equival a veure si els ddCts son o no 0, ja que A==B es pot veure com A-B==0).
+I aprofitem el loop per registrar els resultats de mean(ddCt), FoldChange (=RQ, =2^-ddCt), i p-valor de cada gen per a aquesta comparació.
+```{r}
+## definim els RQs i muntem la taula de resultats (top table)
+RQs <- 2^-mean.ddCts.WT.HFDvsCHOW
+genes <- gene.names[-which(gene.names=="Ppia")]
+topTab <- data.frame(gene=genes, ddCt=mean.ddCts.WT.HFDvsCHOW, FC=RQs, pVal=rep(NA,length(genes)))
+#topTab
+
+## donem un cop d'ull als valors a comparar
+dCts["Apln" , which(targets$Grup == "WT_HFD")]
+dCts["Apln" , which(targets$Grup == "WT_CHOW")]
+## i fem el loop del test de wilcoxon per comparacio de mitjanes per obtenir els p-valors
+for (i in 1:nrow(dCts)){
+  res <- wilcox.test(dCts[i , which(targets$Grup == "WT_HFD")], 
+              dCts[i , which(targets$Grup == "WT_CHOW")],
+              paired = FALSE)
+  topTab[i,"pVal"] <- res$p.value
+}
+sortTab <- topTab[with(topTab, order(pVal)), ]
+show(sortTab)
+## i exportem la taula a fitxer csv
+write.table(sortTab, file = "topTab_comp2_WT.HDFvsCHOW.csv", 
+            sep = "\t", dec = ".", row.names = FALSE, col.names = TRUE, quote = FALSE)
+```
+
+Per acabar, grafiquem els RQ
+```{r}
+## fer el grafic
+plot(1:length(names(RQs)), RQs, xaxt='n', log = "y", ylim = c(0.1, 10), 
+     pch=15, col = gene.col, main = "FoldChange(2^-ddCt) by gene in WT.HFD - WT.CHOW", 
+     ylab = "FoldChange (= 2^-ddCt)", xlab="")
+abline(h = 1, lty = 2)
+axis(1, at = 1:length(row.names(ddCts.WT.HFDvsCHOW)), labels = row.names(ddCts.WT.HFDvsCHOW), las = 2)
+arrows(1:length(names(RQs)), RQs, 
+       1:length(names(RQs)), 1, 
+       length=0, lwd = 5, col = gene.col, angle=90, code=3)
+pos.x <- which(topTab$pVal<0.05 & topTab$ddCt<0) # els de ddCt negatiu seran els de FC positiu
+neg.x <- which(topTab$pVal<0.05 & topTab$ddCt>0) # els de ddCt negatiu seran els de FC negatiu
+pos.y <- RQs[pos.x]+0.5
+neg.y <- RQs[neg.x]-0.5
+if (length(pos.x)>0) {text(pos.x, y = pos.y, "*")}
+if (length(neg.x)>0) {text(neg.x, y = neg.y, "*")}
+## i exportar-lo
+png("FCbyGene_comp2.png")
+  plot(1:length(names(RQs)), RQs, xaxt='n', log = "y", ylim = c(0.1, 10), 
+       pch=15, col = gene.col, main = "FoldChange(2^-ddCt) by gene in WT.HFD - WT.CHOW", 
+       ylab = "FoldChange (= 2^-ddCt)", xlab="")
+  abline(h = 1, lty = 2)
+  axis(1, at = 1:length(row.names(ddCts.WT.HFDvsCHOW)), labels = row.names(ddCts.WT.HFDvsCHOW), las = 2)
+  arrows(1:length(names(RQs)), RQs, 
+         1:length(names(RQs)), 1, 
+         length=0, lwd = 5, col = gene.col, angle=90, code=3)
+  pos.x <- which(topTab$pVal<0.05 & topTab$ddCt<0) # els de ddCt negatiu seran els de FC positiu
+  if (length(pos.x)>0) {text(pos.x, y = pos.y, "*")}
+  if (length(neg.x)>0) {text(neg.x, y = neg.y, "*")}
+dev.off()
+```
+En aquest cas, tenim `r length(pos.x)` gens significatius (a 0.05) amb major expressió a TG.HFD que en WT.HFD (els casos amb ddCt negatiu), i `r length(neg.x)` casos significatius amb menor expressió.
+
+
+
+## Comparacio 3: TG_HFD vs WT_HFD
+Volem obtenir resultats de la tercera comparació: TG_HFD vs WT_HFD en adipós.
+Per això, calcularem els ddCt de cada gen, segons el mètode Livak, restant de cada valor dCts dels gens a les mostres TG_HFD(test) la mitjana dels dCts del mateix gen a les mostres WT_HFD(control). 
+
+Primer doncs, calculem les mitjanes per gen del grup control
+```{r}
+## mirem quines mostres estan implicades
+which(targets$Grup == "WT_HFD")
+
+## calculem la mitjana dels controls (WT.HFD en aquest cas) per cada gen
+dCts[ , which(targets$Grup == "WT_HFD")]
+mean.WT.HFD <- apply(dCts[ , which(targets$Grup == "WT_HFD")], 1, mean)
+mean.WT.HFD
+```
+
+després, calculem les ddCts de les mostres TG_HFD restant la mitjana de cada gen control obtinguda just abans
+```{r}
+## mirem quines mostres estan implicades
+which(targets$Grup == "TG_HFD")
+
+## calculem el doble delta Ct de cada gen en la comparacio TG.HFD - WT.HFD
+dCts["Apln" , which(targets$Grup == "TG_HFD")] ## cas de la Apelina a mode d'exemple
+mean.WT.HFD["Apln"] ## cas de la Apelina a mode d'exemple
+ddCts.TGvsWT.HFD <- dCts[ , which(targets$Grup == "TG_HFD")] - mean.WT.HFD
+ddCts.TGvsWT.HFD["Apln",] ## cas de la Apelina a mode d'exemple
+```
+
+i procedim a fer els gràfics corresponents pels ddCts
+```{r}
+## definim de nou la paleta de colors
+gene.col = c(rainbow(dim(dCts.byGene)[2]+8)) # el +8 es tema estetic
+## i fem grafiques de ddCt
+boxplot(t(ddCts.TGvsWT.HFD), las = 2, col = gene.col, main = "ddCt values by gene in TG.HFD - WT.HFD")
+abline(h = 0, lty = 2)
+mean.ddCts.TGvsWT.HFD <- apply(ddCts.TGvsWT.HFD, 1, mean)
+sd.ddCts.TGvsWT.HFD <- apply(ddCts.TGvsWT.HFD, 1, sd)
+plot(1:length(row.names(ddCts.TGvsWT.HFD)), mean.ddCts.TGvsWT.HFD, xaxt='n', 
+     pch=15, col = gene.col, main = "Mean ddCt values by gene in TG.HFD - WT.HFD", 
+     ylab = "Mean ddCt (+/-SD)", xlab="", ylim = c(-5,7))
+axis(1, at = 1:length(row.names(ddCts.TGvsWT.HFD)), labels = row.names(ddCts.TGvsWT.HFD), las = 2)
+arrows(1:length(row.names(ddCts.TGvsWT.HFD)), mean.ddCts.TGvsWT.HFD-sd.ddCts.TGvsWT.HFD, 
+       1:length(row.names(ddCts.TGvsWT.HFD)), mean.ddCts.TGvsWT.HFD+sd.ddCts.TGvsWT.HFD, 
+       length=0.05, angle=90, code=3)
+abline(h = 0, lty = 2)
+```
+
+Fem els test per veure si els dCts dels grups de la comparació són o no diferents (que equival a veure si els ddCts son o no 0, ja que A==B es pot veure com A-B==0).
+I aprofitem el loop per registrar els resultats de mean(ddCt), FoldChange (=RQ, =2^-ddCt), i p-valor de cada gen per a aquesta comparació.
+```{r}
+## definim els RQs i muntem la taula de resultats (top table)
+RQs <- 2^-mean.ddCts.TGvsWT.HFD
+genes <- gene.names[-which(gene.names=="Ppia")]
+topTab <- data.frame(gene=genes, ddCt=mean.ddCts.TGvsWT.HFD, FC=RQs, pVal=rep(NA,length(genes)))
+#topTab
+
+## donem un cop d'ull als valors a comparar
+dCts["Apln" , which(targets$Grup == "TG_HFD")]
+dCts["Apln" , which(targets$Grup == "WT_HFD")]
+## i fem el loop del test de wilcoxon per comparacio de mitjanes per obtenir els p-valors
+for (i in 1:nrow(dCts)){
+  res <- wilcox.test(dCts[i , which(targets$Grup == "TG_HFD")], 
+              dCts[i , which(targets$Grup == "WT_HFD")],
+              paired = FALSE)
+  topTab[i,"pVal"] <- res$p.value
+}
+sortTab <- topTab[with(topTab, order(pVal)), ]
+show(sortTab)
+## i exportem la taula a fitxer csv
+write.table(sortTab, file = "topTab_comp3_TGvsWT.HDF.csv", 
+            sep = "\t", dec = ".", row.names = FALSE, col.names = TRUE, quote = FALSE)
+```
+
+Per acabar, grafiquem els RQ
+```{r}
+## fer el grafic
+plot(1:length(names(RQs)), RQs, xaxt='n', log = "y", ylim = c(0.1, 10), 
+     pch=15, col = gene.col, main = "FoldChange(2^-ddCt) by gene in TG.HFD - WT.HFD", 
+     ylab = "FoldChange (= 2^-ddCt)", xlab="")
+abline(h = 1, lty = 2)
+axis(1, at = 1:length(row.names(ddCts.TGvsWT.HFD)), labels = row.names(ddCts.TGvsWT.HFD), las = 2)
+arrows(1:length(names(RQs)), RQs, 
+       1:length(names(RQs)), 1, 
+       length=0, lwd = 5, col = gene.col, angle=90, code=3)
+pos.x <- which(topTab$pVal<0.05 & topTab$ddCt<0) # els de ddCt negatiu seran els de FC positiu
+neg.x <- which(topTab$pVal<0.05 & topTab$ddCt>0) # els de ddCt negatiu seran els de FC negatiu
+pos.y <- RQs[pos.x]+0.5
+neg.y <- RQs[neg.x]-0.5
+if (length(pos.x)>0) {text(pos.x, y = pos.y, "*")}
+if (length(neg.x)>0) {text(neg.x, y = neg.y, "*")}
+## i exportar-lo
+png("FCbyGene_comp3.png")
+  plot(1:length(names(RQs)), RQs, xaxt='n', log = "y", ylim = c(0.1, 10), 
+       pch=15, col = gene.col, main = "FoldChange(2^-ddCt) by gene in TG.HFD - WT.HFD", 
+       ylab = "FoldChange (= 2^-ddCt)", xlab="")
+  abline(h = 1, lty = 2)
+  axis(1, at = 1:length(row.names(ddCts.TGvsWT.HFD)), labels = row.names(ddCts.TGvsWT.HFD), las = 2)
+  arrows(1:length(names(RQs)), RQs, 
+         1:length(names(RQs)), 1, 
+         length=0, lwd = 5, col = gene.col, angle=90, code=3)
+  pos.x <- which(topTab$pVal<0.05 & topTab$ddCt<0) # els de ddCt negatiu seran els de FC positiu
+  if (length(pos.x)>0) {text(pos.x, y = pos.y, "*")}
+  if (length(neg.x)>0) {text(neg.x, y = neg.y, "*")}
+dev.off()
+```
+En aquest cas, tenim `r length(pos.x)` gens significatius (a 0.05) amb major expressió a TG.HFD que en WT.HFD (els casos amb ddCt negatiu), i `r length(neg.x)` casos significatius amb menor expressió.
+

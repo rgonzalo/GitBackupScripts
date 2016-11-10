@@ -1,0 +1,533 @@
+\documentclass{article}
+\usepackage{underscore}
+\usepackage[utf8]{inputenc}
+\usepackage{longtable}
+\usepackage[margin=1in]{geometry}
+\usepackage[spanish]{babel}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage[table,xcdraw]{xcolor}
+\usepackage{fancyvrb}
+\usepackage{lscape}
+\usepackage{anysize}
+\usepackage{fancyhdr}%encabezados y pies de página
+\usepackage{color}
+
+\lfoot[a1] {\tiny\textcolor{violet}{VHIR-UEB-FOR-013v.01}}
+
+\lhead{\includegraphics[width=.28\textwidth]{./images/UEBblanc.jpg}}
+\rhead{\leftmark}
+
+\pagestyle{fancy}
+
+\bibliographystyle{plain}
+
+\marginsize{3.0cm}{3.5cm}{2.5cm}{2.5cm}
+\renewcommand{\baselinestretch}{1.3} % per canviar interlineado
+\renewcommand*\footnoterule{}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=violet
+}
+
+\begin{document}
+
+\title{\begin{figure}[htbp]
+       \centering
+       \includegraphics[width=60mm]{images/UEBblanc.jpg}
+       \includegraphics[width=35mm]{images/IR.jpg}
+       \end{figure}
+       \vspace{1cm}
+       Análisis de Significación Biológica\\
+       utilizando la Gene Ontology\\
+       \footnotetext{\footnoterule{\tiny\textcolor{violet}{VHIR-UEB-FOR-013v.01}}}\\
+       {\normalsize Maria Martell - B3593}\\
+       }
+
+
+\author{Ricardo Gonzalo, Ferran Brians\'{o} y Alex S\'{a}nchez \\ 
+        Unitat d'Estad\'{i}stica i Bioinform\`{a}tica \\
+        Vall d'Hebron Institut de Recerca (VHIR) \\
+        }
+        
+\maketitle
+\newpage
+
+\tableofcontents
+\newpage
+
+
+<<include=FALSE>>=
+require(knitr)
+opts_chunk$set(fig.path = 'images/grafic', echo=FALSE, message=FALSE,warnings = FALSE )
+options(warn=-1)
+@
+
+<<setDirs>>=
+mainDir <-getwd()
+workingDir <- mainDir
+dataDir <-file.path(mainDir, "dades")
+codeDir <-  file.path(workingDir, "Rcode")
+resultsDir <- file.path(workingDir, "results")
+@
+
+
+<<loadpackages, results='hide', echo=FALSE, message=FALSE>>=
+installifnot <- function (packageName){
+ if (!(require(packageName, character.only=TRUE))) {
+    install.packages(packageName)
+  }else{
+    detach(paste ("package", packageName, sep=":"), character.only=TRUE)
+  } 
+}
+bioCifnot <- function (packageName){
+ if (!(require(packageName, character.only=TRUE))) {
+    source("http://bioconductor.org/biocLite.R")
+    biocLite(packageName)
+ }else{
+  detach(paste ("package", packageName, sep=":"), character.only=TRUE)
+  }  
+}
+installifnot("gdata")
+#installifnot("hwriter")
+installifnot("R2HTML")
+# installifnot("readxl")
+#installifnot("VennDiagram")
+bioCifnot("org.Rn.eg.db")
+# bioCifnot(c("gage"))
+# bioCifnot(c("gageData"))
+# bioCifnot(c("pathview"))
+bioCifnot(c("GO.db"))
+bioCifnot(c("topGO"))
+bioCifnot(c("KEGG.db"))
+#bioCifnot(c("hgu133a.db"))
+bioCifnot(c("GOstats"))
+# bioCifnot(c("FGNet"))
+# bioCifnot(c("RDAVIDWebService"))
+bioCifnot(c("goProfiles"))
+if(!(require(printr))) {
+  install.packages(
+    'printr',
+    type = 'source',
+    repos = c('http://yihui.name/xran', 'http://cran.rstudio.com')
+  )
+}
+require(biomaRt)
+require(GOstats)
+require(topGO)
+require(R2HTML)
+require(xtable)
+library(ReportingTools)
+@ 
+
+\section{Introducción}
+
+La investigadora está interesada en realizar un analisis de la significación biológica y enriquecimiento utilizando la Gene Ontology (GO). Mediante el análisis de enriquecimento, para un determinado grupo de genes que están diferencialmente expresados en una determinada condición, se pueden encontrar que términos de la GO están sobrerepresentados, lo que remarcará en que procesos biológicos están implicados los genes estudiados.
+
+\subsection{Los datos para el análisis}
+Los datos han sido proporcionados por el investigador por mail en un archivo llamado: \texttt{FDR menor o igual a 0,05_M Martell 2016.xlsx}. Se trata de una lista de genes procedente de una comparación de un análisis previo de un experimento de microarrays, realizado con la \textit{Transcription Analysis Console} de la casa comercial Affymetrix.\\
+
+Todos los análisis han sido realizados con el programa estadístico ``R''( \textttt{\Sexpr{R.Version()$versi}, Copyright (C) 2015 The R Foundation for Statistical Computing} ), y se han utilizado los paquetes \texttt{GOstats} y \texttt{topGO}.\\
+
+\newline
+A continuación se muestran las 10 primeras filas de los datos proporcionados:\\
+\newline
+%
+<<getGeneList>>=
+x1<-PVLvsSHAM<- read.csv(file.path(dataDir, "TopTableFDR005.csv"), head=T, sep=";", dec=".", row.names=1)
+colnames(x1)<-c("PVL.AvgSignal","Sham.AvgSignal","FoldChange","pvalue","FDR","GeneSymbol")
+@
+{\scriptsize
+<<firstable,results='asis'>>=
+xtable((x1)[1:10,])
+@
+}
+\normalsize
+\newpage
+Como se puede observar en la tabla anterior, la columna que disponemos de identificadores de los genes son el \texttt{GeneSymbol} y el identificador de Affymetrix. Para poder hacer el análisis de Gene Ontology, es necesario trabajar a partir de anotaciones de \texttt{Entrez}, por lo que se han de obtener estas nuevas anotaciones. Es importante remarcar que en este proceso se pueden perder algunos genes, ya que es posible que en las bases de datos no estén descritas las equivalencias \texttt{AffyID-Entrez} para todos los genes.
+
+<<gene2entrez>>=
+#mirem com es diu el dataset en biomaRt de rata
+x1<-PVLvsSHAM<- read.csv(file.path(dataDir, "TopTableFDR005.csv"), head=T, sep=";", dec=".", row.names=1)
+ensem<-useMart("ensembl")
+ensem2<-listDatasets(ensem) #rnorvegicus_gene_ensembl
+#guardem en un vector els AffyID
+x1$affyID<-rownames(x1)
+affyID<-x1[,which(colnames(x1)=="affyID")] #419
+
+#cridem el dataset de biomaRt que farem servir
+biodataset <- useDataset("rnorvegicus_gene_ensembl", useMart("ensembl"))
+#antes de utilizar la funcion biomaRt hay que definir: filtros, atributos y valores.
+filtros<-listFilters(biodataset)
+attributos<- listAttributes(biodataset)
+#fem la cerca
+entrezfromgimsin <- getBM(filters= "affy_ragene_2_1_st_v1", 
+                  attributes= c("entrezgene","affy_ragene_2_1_st_v1"),
+                  values= affyID,
+                  mart= biodataset,uniqueRows=TRUE)
+#dim(entrezfromgimsin)425 2
+
+#ho afegim al dataset original
+colnames(entrezfromgimsin)<-c("EntrezID","affyID")
+x1.Ent<-merge(x1,entrezfromgimsin,by="affyID")
+#dim(x1.Ent)425 8
+#head(x1.Ent)
+#eliminem totes aquelles files que no tenen entrezgene
+x1.data<-na.omit(x1.Ent)
+#dim(x1.data)399 8
+#head(x1.data)
+#tail(x1.data)
+#######################
+##altre manera de fer-ho (exemple per humans)
+#######################
+#require(Homo.sapiens) # require(hta20sttranscriptcluster.db)
+#keytypes(Homo.sapiens) # keytypes(hta20sttranscriptcluster.db)
+#head(prots)
+#tstKey <- rownames(prots)
+#protAnots<- select(Homo.sapiens, keys = tstKey, keytype = "UNIPROT", columns = c("ENTREZID","SYMBOL"))
+#dim(prots)
+#dim(protAnots)
+@
+
+El conjunto de datos original contenía 419 \texttt{identificadores de Affymetrix}, de los cuales se han encontrado 399 con \texttt{EntrezID}. Con este nuevo conjunto de datos se procederá a realizar el análisis de enriquecimiento de la Gene Ontology.
+
+%-------------------------------------------------------------------------------------------------------------------------------------------
+\section{Análisis}
+%-------------------------------------------------------------------------------------------------------------------------------------------
+Dado un determinado conjunto de genes diferencialmente expresados, el análisis de enriquecimiento busca seleccionar funciones y procesos biológicos que caracterizan este conjunto, lo que significa que estas funciones aparecen más a menudo en él, que en el resto de genes analizados. Se han desarrollado muchas variaciones de este tipo de análisis.\cite {Khatri:2005}. En este análisis se ha aplicado el análisis ``clásico'' de enriquecimiento \cite{Gentleman:2004}, implementado en los paquetes \texttt {GOstats} y \texttt{topGO}, del proyecto Bioconductor.\\
+En esta sección se mostrarán los resultados del análisis de enriquecimiento utilizando dos métodos: \texttt{GOstats} y \texttt{topGO}.\\
+
+\subsection{Análisis de enriquecimento utilizando \texttt{GOstats}}
+Para realizar el análisis según el paquete \texttt{GOstats}, se necesita tener lo que se llama "universo" de genes, que suele ser el total de genes descritos para un organismo, para así saber en este gran conjunto de genes la proporción esperada de cada gen en cada categoría de la GO. Posteriormente se comparará la proporción obtenida con este "universo" de genes, con la proporción obtenida en nuestro conjunto de genes. Para este estudio se ha utilizado como "universo" de genes, todos los genes anotados en el array de Affymetrix utilizado.
+<<geneuniverse>>=
+#creem un gene universe amb totes les probeset id de l'array utilitzat
+#en aquest cas s'ha utilitzat un arxiu normalized.all d'un estudi amb els mateixos arrays
+universo<- read.csv(file.path(dataDir, "normalized.all.csv"), head=T, sep=";", dec=".")
+#head(universo)
+
+#cridem el dataset de biomaRt que farem servir
+biouniverse <- useDataset("rnorvegicus_gene_ensembl", useMart("ensembl"))
+#fem la cerca
+entrezfromaffyID <- getBM(filters= "affy_ragene_2_1_st_v1", 
+                  attributes= c("entrezgene","affy_ragene_2_1_st_v1"),
+                  values= universo$X,
+                  mart= biodataset,uniqueRows=TRUE)
+
+#dim(entrezfromaffyID) 27906 2
+#head(entrezfromaffyID)
+colnames(entrezfromaffyID)<-c("EntrezID","affyID")
+entrezfromaffyID<-na.omit(entrezfromaffyID)
+#dim(entrezfromaffyID) 20778 2
+@
+
+
+<<GOstats1,echo=FALSE>>=
+#creamos una lista con unos cutoffs
+selected<-x1.data[which(x1.data$FDR_pvalue_PVLvsSham<0.05 & abs(x1.data$FoldChange_linear_PVLvsSham)>2),]
+
+#creem les llistes necessaries
+listOfLists <- list(PVLvsSHAM)
+universeList<-as.character(entrezfromaffyID$EntrezID)
+geneList<-as.character(selected$EntrezID)
+symbolsList <- as.character(selected$GeneSymbol)
+listsOfResults <- list(GOResults=list(), KEGGResults=list())
+listOfCategories<-list("CC","BP","MF")
+
+for (i in 1:length(listOfLists)){
+# Seleccionamos las listas para el an?lisis
+  comparison = names(listOfLists)[i]
+  myLists <- listOfLists[[i]]
+  entrezUniverse <-  universeList
+  geneIds <-   geneList
+  for (u in 1:length(listOfCategories)){
+# Creamos los "hiperpar?metros" en que se basa el an?lisis
+  GOparams = new("GOHyperGParams",
+    geneIds=geneIds, 
+    universeGeneIds=entrezUniverse,
+    annotation="org.Rn.eg.db", 
+    ontology=listOfCategories[[u]],
+    pvalueCutoff=0.05, 
+    conditional=FALSE,
+    testDirection="over")
+  KEGGparams = new("KEGGHyperGParams",
+    geneIds=geneIds, 
+    universeGeneIds=entrezUniverse,
+    annotation="org.Rn.eg.db",  
+    pvalueCutoff=0.05, 
+    testDirection="over")
+
+# Ejecutamos los an?lisis
+  GOhyper = hyperGTest(GOparams)
+  KEGGhyper = hyperGTest(KEGGparams)
+  #cat("\nComparison: ", comparison,"\n")
+  #cat("GO\n")
+  #print(head(summary(GOhyper)))
+  #cat("KEGG\n")
+  #print(head(summary(KEGGhyper)))
+  
+# Creamos un informe html con los resultados
+####Lo comentamos si se crea el informe con el paquete Reporting tools  
+  #  GOfilename =file.path(resultsDir, 
+  #    paste("GOResults.",listOfCategories[[u]],".html", sep=""))
+  #   htmlReport(GOhyper, file = GOfilename, summary.args=list("htmlLinks"=TRUE))
+  # }
+  # 
+  # KEGGfilename =file.path(resultsDir, 
+  #    paste("KEGGResults","html", sep="."))
+  # htmlReport(KEGGhyper, file = KEGGfilename, summary.args=list("htmlLinks"=TRUE))
+
+
+
+
+#crea un report html para GO amb links amb Reporting Tools
+###########################################################################
+GOfilename =paste("GOResults.",listOfCategories[[u]],".html", sep="")
+  
+GOReport <- HTMLReport(shortName = GOfilename,
+                          title ="Analisis Significación Biologica with GO",
+                          reportDirectory = "./results")
+
+publish(GOhyper, GOReport, selectedIDs = geneList,
+        annotation.db = "org.Rn.eg.db", categorySize = 3)
+
+finish(GOReport)
+####
+}
+
+#crea un report html para KEGG amb links (amb funcions heredades de BasicPipe)
+##############################################################################
+runMulticore<-"0"
+GOTerms2Genes.sql <- function(hgResult, anotPackage)
+{
+  selectedGOTerms <- intersect(names(geneIdUniverse(hgResult)), summary(hgResult)[, 1])
+  selectedGO<- geneIdUniverse(hgResult)[selectedGOTerms]
+       if (runMulticore ==1 || runMulticore ==3) { 
+           selectedGenes <- mclapply(selectedGO, function(x) {intersect(geneIds(hgResult),x)})
+         } else {
+           selectedGenes <- lapply(selectedGO, function(x) {intersect(geneIds(hgResult),x)})
+       }
+  
+  sql.ENTREZSYMBOL <- "SELECT gene_id, symbol
+                       FROM genes, gene_info
+                       WHERE genes._id=gene_info._id"
+
+  if (regexpr(".db", anotPackage) < 0)
+  {
+     genesAnnot <- dbGetQuery(eval(parse(text = paste(anotPackage, "_dbconn()", sep = ""))), sql.ENTREZSYMBOL)
+  }else{
+    genesAnnot <- dbGetQuery(eval(parse(text = paste(substr(anotPackage, 1, nchar(anotPackage) - 3), "_dbconn()", sep = ""))), sql.ENTREZSYMBOL)
+  }
+  
+  if (runMulticore ==1 || runMulticore ==3) { 
+      selectedSymb <- mclapply(selectedGenes, function(x) {genesAnnot[which(unlist(genesAnnot) %in% x), ]})
+      selectedSymb <- mclapply(selectedSymb, function(x) {x <- x[, -1]})
+    } else {
+      selectedSymb <- lapply(selectedGenes, function(x) {genesAnnot[which(unlist(genesAnnot) %in% x), ]})
+      selectedSymb <- lapply(selectedSymb, function(x) {x <- x[, -1]})         
+   }
+
+  return(selectedSymb)
+}
+
+
+
+
+organisme<-"Rattus norvegicus"
+addGeneNames<-TRUE
+
+   getSymbol <- function (x)
+  {
+    if (length(x)>0)
+    {
+      simbols <- getSYMBOL(x, anotPack)
+    }else{
+      simbols <- NULL
+    }
+
+    return(simbols)
+  }
+  
+  hyperRes <- KEGGhyper
+  sumari <- summary(hyperRes)
+  fName <- "KEGG Enrichment Analysis" # Informe en HTML
+     
+  if (addGeneNames)
+  {    
+    EnrichedKEGGTerms <- as.character(sumari[, 1])
+        
+    if (length(EnrichedKEGGTerms) > 0)
+    {
+      anotPackage<-"org.Rn.eg.db"
+      selectedSymbols <- GOTerms2Genes.sql(hyperRes, anotPackage)
+      genesInHg <- sapply(selectedSymbols, function(x) paste(x, collapse = ", "))
+      Report <- cbind(sumari, GeneNames = genesInHg)
+    }else{
+      Report <- sumari
+    }
+  }else{
+    Report <- sumari
+  }
+
+  Report[, 1] <- paste("<a href=\"http://www.genome.jp/dbget-bin/www_bget?path:", organisme, Report[, 1], "\">", Report[, 1], "</a>", sep="") 
+
+  ReportSig <- Report[1:nrow(sumari),]
+
+HTML(ReportSig,file=file.path(resultsDir,"KEGGResults_withGenes.html"))
+}
+ 
+ 
+ 
+ 
+ 
+#per saber els genes implicats en cada categoria (et retorna una lista de listas
+#de Entrez que és difícil de exportar)
+################################################################################
+p <-  GOparams
+origGeneIds <- geneIds(p) 
+selected <- intersect(geneIds(p), universeGeneIds(p)) 
+cat2Entrez <- categoryToEntrezBuilder(p) ## get the gene (Entrez ID) in the category
+geneInCat <- lapply(as.list(summary(GOhyper)[,1]), 
+                    function(goid) {selected[selected %in% cat2Entrez[[goid]]]}) 
+
+@
+
+A continuación, a modo de ejemplo, se muestran los resultados del análisis de enriquecimiento de la GO para la la ontología
+\texttt{"Molecular Function"} y las primeras cinco entradas de la tabla resultante:\\
+<<sumarigo>>=
+GOhyper
+@
+
+\newpage
+{\scriptsize
+<<molecul,results='asis'>>=
+xtable(summary(GOhyper)[1:5,])
+@
+}
+\normalsize
+\newline
+
+De la tabla anterior:
+\begin{itemize}
+  \item \textbf{Pvalue}: resultado del pvalor para el test estadístico realizado.
+  \item \textbf{OddsRatio}: valor del estadístico en el test estadístico realizado ("Odsratio").
+  \item \textbf{ExpCount}: Es el número de genes esperado en dicha categoría de la GO seǵun el número total de genes estudiado.
+  \item \textbf{Count}: Es el número de genes encontrado en el conjunto de datos estudiado en dicha categoría de la GO. Interesa que sea mayor a \textbf{ExpCount}.
+  \item \textbf{Size}: Número total de genes anotados en dicha categoría.
+\end{itemize}
+
+Entre los resultados del análisis de enriquecimento se entregará un archivo .html para cada una de las ontologías de la GO. 
+
+\subsection{Análisis de enriquecimento utilizando \texttt{topGO}}
+
+El análisis utilizando \texttt{topGO} es relativamente similar al que se realiza con \texttt{GOstats}. Varia en el hecho que en lugar de trabajar con dos listas de genes (Universo/expresados diferencialmente) se utiliza una lista de ``scores''. Para ello se creará una sola lista de genes uniendo la lista de genes diferencialmente expresados, que nos ha proporcionado el investigador, con el resto de genes que aparecen en el array. Esta lista estará ordenada por el pvalor ajustado (al resto de genes del array se les asignará un pvalor de 1).
+
+<<crealistapvalor>>=
+#es prepara un dataset amb tots els gens (DE+universe) amb FDR=1 pels genes del universe
+x1.affyID<-x1.data[,-c(2:8)]
+universo$FDR_pvalue_PVLvsSham<-NA
+universo2<-universo[,-c(3:14)]
+colnames(universo2)<-c("affyID","GeneSymbol","FDR_pvalue_PVLvsSham")
+universo2<-universo2[-which(x1.affyID %in% universo2$affyID),]
+x1.prueba<-x1.data[,-c(2:5,8)]
+TGgenes<-rbind(universo2,x1.prueba)
+TGgenes<-TGgenes[order(TGgenes$FDR_pvalue_PVLvsSham),]
+##asignamos valor 1 al resto de pvalores
+TGgenes$FDR_pvalue_PVLvsSham[is.na(TGgenes$FDR_pvalue_PVLvsSham)]<-1
+@
+
+
+<<topGO1,echo=FALSE,message=FALSE,warning=FALSE,results='hide'>>=
+setwd(resultsDir)
+listOfTables <- list(PVLvsSHAM) 
+listOfTopGOResults <- list(GOdatas=list(), Enrichs=list(), EnrichTables=list())
+
+for (i in 1:length(listOfTables)) {
+# Seleccionamos las listas para el an?lisis
+  comparison = names(listOfTables)[i]
+  topTab <- listOfTables[[i]]
+  
+# Creamos los "hiperparametros" en que se basa el analisis
+  allMyGenes<-TGgenes$FDR_pvalue_PVLvsSham
+  names(allMyGenes)<-TGgenes$affyID
+  topDiffGenes <- function(allScore) {
+       return(allScore < 0.05)
+  }
+  for (u in 1:length(listOfCategories)){
+  myGOData <- new("topGOdata", ontology=listOfCategories[[u]],#"BP", 
+                allGenes=allMyGenes,
+                geneSel=topDiffGenes, nodeSize=10,  
+                annot= annFUN.db, affyLib="ragene21sttranscriptcluster")
+  
+# Ejecutamos los analisis
+  Myenrichment_Fisher <- runTest(myGOData, algorithm= "classic", statistic="fisher")
+  # Myenrichment_Fisher
+  enrich_table <-GenTable(myGOData, classicFisher=Myenrichment_Fisher,
+                          topNodes = 40)
+  #head(enrich_table) # get the enrichment results as table
+
+  # Guardamos los resultados para comparacioens posteriores
+  listOfTopGOResults[[i]][["GOdata"]]  <- myGOData
+  listOfTopGOResults[[i]][["Enrichs"]] <- Myenrichment_Fisher
+  listOfTopGOResults[[i]][["EnrichTables"]] <- enrich_table
+
+# Creamos un informe html con los resultados
+ 
+  topGOfilename =file.path(resultsDir,paste("TopGOResults.",listOfCategories[[u]],".html", sep=""))
+  HTML(enrich_table, file=topGOfilename)
+  
+ #Creamos un gráfico con los nodos más importantes coloreados según nivel de significación
+  graphFileName <- file.path(resultsDir, paste("topGOGraphNodes",listOfCategories[[u]],"pdf", sep="."))
+  pdf(graphFileName)
+  aGOData <-listOfTopGOResults[[i]][["GOdata"]] 
+  anEnrichment <- listOfTopGOResults[[i]][["Enrichs"]]
+  showSigOfNodes(aGOData, score(anEnrichment), firstSigNodes=15, useInfo="all")
+  dev.off()
+}}
+@
+\\
+
+En la tabla siguiente se muestran las 10 primeras entradas de los resultados obtenidos para una de las ontologías de la GO, al realizar un análisis de enriquecimiento utilizando el paquete \texttt{TopGO}.\\
+
+{\scriptsize
+<<topgoresults, results='asis'>>=
+xtable(enrich_table)[1:10,]
+@
+}
+\normalsize
+
+\noindent Entre los resultados entregados se facilitan varios archivos con la lista completa de categorías de la GO enriquecidas, uno para cada ontología analizada.\\
+
+Utilizando \texttt{topGO} es posible crear un gráfico (\ref{topgo}) con los nodos coloreados según el nivel de significación. Esta gráfica permite valorar como de importantes son los resultados encontrados en nuestro análisis particular(según el nivel de significación) dentro de la estructura general de la GO. A continuación se muestra el gráfico asociado a la ontologia \texttt{BP}. En formato pdf se adjuntan el resto de gráficos con el resto de ontologías.
+
+\begin{figure}[htbp]
+\includegraphics[scale=0.80]{results/topGOGraphNodesCC.pdf}
+\caption{\label{topgo}{Gráfico de Nodos para la ontología \texttt{BP}.}}
+\end{figure}
+
+\subsection{Análisis de enriquecimento utilizando \texttt{KEGG}}
+En la siguiente tabla se muestran los resultados del análisis de la KEGG y las primeras cinco entradas de la tabla resultante:
+
+<<summarykegg>>=
+KEGGhyper
+@
+\newline
+
+{\scriptsize
+<<Kegg,results='asis'>>=
+xtable(summary(KEGGhyper)[1:5,])
+@
+}
+\normalsize
+\newline
+\section{Conclusiones}
+A partir de una lista de genes diferencialmente expresados, procedente de un estudio de microarrays, se ha realizado un estudio de enriqueciento de la Gene Ontology utilizando dos métodos diferentes (\texttt{GOstats} y \texttt{topGO}), y un análisis de enriquecimiento utilizando la base de datos Kyoto Encyclopedia of Genes and Genomes. Los dos métodos utilizados para en el análisis de la GO han dado resultados muy similares, no idénticos, ya que en un caso se han utilizado los Entrez (\texttt{GOstats}) y en el otro los identificadores de Affymetrix (\texttt{topGO.}).
+\nespage
+\bibliography{MDAreferences}
+
+\end{document}
+
+
+
+
+

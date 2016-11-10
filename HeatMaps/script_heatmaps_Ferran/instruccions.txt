@@ -1,0 +1,28 @@
+Per poder utilitzar aquest script cal tenir instal·lat el software R (http://www.r-project.org/) amb el paquet gplots.
+També cal tenir els scripts heatMapParams.R (que conté els paràmetres que cal editar en cada cas) i heatMapFunctions.R (que conté funcions d'R necessàries i és millor no tocar).
+
+Per poder convertir el .pdf generat a .tif o altres formats cal tenir l'eina ImageMagick.
+Aquesta eina està accessible des de linux o bé te la pots instal·lar en windows des de http://www.imagemagick.org/script/binary-releases.php#windows
+En cas que ho executis des de windows, no he comprovat si es pot fer directament la conversió des de l'script, o si és millor que generis sols el pdf (indicant out.type <- "pdf" en el fitxer de paràmetres) i després converteixis el pdf a tif indicant els dpi que vols (amb una comanda similar a "convert -density 300 nom.pdf nom.tif").
+
+Un cop tinguis R i ImageMagick a punt. Has de fer 4 coses bàsiques:
+
+* El primer has de fer és preparar el fitxer tipus .csv amb les dades d'entrada seguint el mateix format que en l'exemple de inputExprValues.csv del teu cas.
+El separador de columnes sol ser ";", però pots indicar el que calgui si ho poses al paràmetre col.sep.
+Tingues en compte que hi ha d'haver una primera columna sense capçalera, que inclogui valors no repetits (és igual si són nombres o text) i que seran els mateixos que utilitzaràs per generar la llista de files a subsetejar per fer el heat map final. En l'exemple són els IDs d'Affymetrix, però pots fer-ho amb valors numèrics de 1 a N si et va millor, sempre que siguin valors únics i que la seva capçalera de columna estigui buida.
+A part d'això, cal que hi hagi una columna (aquesta sí amb capçalera) amb les etiquetes dels gens que vulguis que apareixin al heat map. En l'exemple està a la columna 1 (ja que el sistema considera que la columna de noms de files és la 0), però li pots indicar al paràmetre ids.col a quina estan, i en el nostre cas conté els gene symbols associats a cada affyID. Aquestes etiquetes sí que poden estar repetides, ja que es combinaran amb els IDs únics de cada fila (de la columna 0) per evitar confusions en fer els càlculs.
+Per acabar, però no poc important, la resta de columnes han de contenir els valors d'expressió amb format numèric (pots triar si amb comes o punts pels decimals, indicant-ho al paràmetre dec.sep) i amb la capçalera que identifiqui cada mostra (també hauria de ser única). 
+Molt important és que indiquis al paràmetre samples2clust el número de quines columnes (tenint en compte de nou que la primera, la que conté els IDs de les files, és la columna 0) són les de les mostres que vols incloure al heat map. Si, per exemple, tens 20 mostres situades de la 2a columna a la 21, pots indicar samples2clust <- c(2:21) perquè les agafi totes 20. O, si solaments vols de la 2 a la 6 i de la 17 a la 21 pots indicar c(2:6,17:21) i agafaria sols aquestes 10.
+A més, al fitxer de paràmetres pots indicar si vols substituir les capçaleres de mostra per altres etiquetes, posant replace.labels a TRUE i omplint degudament la llista del paràmetre col.names, tal com hem fet en el teu cas. El mateix passa pels color que vols que tingui cada mostra o grup de mostres, segons condició experimental, amb el paràmetre colors4samples.
+Per últim, comentar que si vols canviar la gama de colors del heat map, sols has de canviar els noms dels colors, tal com s'indica al paràmetre color.palette.
+
+* El segon que has de fer és preparar un fitxer tipus .txt senzill on posis la llista de IDs de gens (o el que sigui) que vulguis incloure al heat map. Sols apareixeran al heat map aquelles files que coincideixin literalment amb els IDs llistats aquí. Si vols que surtin al heat map totes les files del fitxer d'expressions, posa sublist.file <- "" al fitxer de paràmetres.
+
+* El tercer pas és editar el fitxer de paràmetres modificant aquelles variables que creguis convenient, segons lo indicat en aquestes instruccions o als comentaris inclosos al propi fitxer heatMapParams.R
+
+* Un cop fet això, obre l'R des de la mateixa carpeta on tinguis els fitxers heatMapParams.R, heatMapFunctions.R i generateHeatMap.R i escriu source("generateHeatMap.R") a la línia de comandes.
+
+* Per fer nous heat maps canviant algun paràmetre sols cal editar de nou el heatMapParams.R, guardar els canvis, i tornar a fer el source("generateHeatMap.R") des de R.
+
+Per qualsevol dubte o problema: ueb@vhir.org
+

@@ -1,0 +1,19 @@
+\contentsline {section}{\numberline {1}Introduction}{1}
+\contentsline {subsection}{\numberline {1.1}Input Data for Functional Analysis}{2}
+\contentsline {subsection}{\numberline {1.2}Input data preprocessing}{3}
+\contentsline {section}{\numberline {2}Analysis methods and tools}{4}
+\contentsline {subsection}{\numberline {2.1}Enrichment Analysis with \texttt {GOstats} and \texttt {DAVID}}{5}
+\contentsline {subsubsection}{\numberline {2.1.1}Enrichment Analysis using \texttt {GOstats}}{5}
+\contentsline {subsubsection}{\numberline {2.1.2}Enrichment Analysis using \texttt {topGO}}{5}
+\contentsline {subsubsection}{\numberline {2.1.3}Enrichment Analysis (?) using DAVID}{5}
+\contentsline {subsection}{\numberline {2.2}Gene Set Enrichment Analysis}{5}
+\contentsline {subsubsection}{\numberline {2.2.1}Gene Set Enrichment Analysis with \texttt {GAGE}}{5}
+\contentsline {subsubsection}{\numberline {2.2.2}Gene Set Enrichment Analysis with \texttt {GSA}}{6}
+\contentsline {subsection}{\numberline {2.3}Network Analysis}{6}
+\contentsline {subsubsection}{\numberline {2.3.1}Analysis with \texttt {FGNet}}{6}
+\contentsline {subsubsection}{\numberline {2.3.2}Analysis with \texttt {IPA}}{6}
+\contentsline {section}{\numberline {3}Results}{7}
+\contentsline {subsection}{\numberline {3.1}Gene enrichment analysis using \texttt {GOstats}}{7}
+\contentsline {subsection}{\numberline {3.2}Gene enrichment analysis using \texttt {topGO}}{9}
+\contentsline {subsubsection}{\numberline {3.2.1}Comparison between \texttt {GOstats} and \texttt {topGO} output}{12}
+\contentsline {section}{\numberline {4}Results presentation}{12}

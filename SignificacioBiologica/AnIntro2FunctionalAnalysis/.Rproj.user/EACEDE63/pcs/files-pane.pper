@@ -1,0 +1,9 @@
+{
+    "path" : "~/Dropbox (VHIR)/Scripts.all/Analisi funcional (GO-KEGG i altres)",
+    "sortOrder" : [
+        {
+            "ascending" : true,
+            "columnIndex" : 2
+        }
+    ]
+}
