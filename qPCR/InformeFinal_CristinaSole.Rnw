@@ -1,3 +1,9 @@
+%%%%AQUEST SCRIPT GENERA UN INFORME EN LATEX DE UN EXPERIMENT DE qPCR
+%%%%TAL COM ESTÀ ESTA PENSAT PER PLAQUES DE EXIQON, MES QUE RES PER QUE 
+%%%%MOLTS CONTROLS SON ESPECIFICS D'AQUESTES PLAQUES. TRAIENT AIXÒ ES PODRIA
+%%%%FER SERVIR PER QUALSEVOL TIPUS DE EXPERIMENT DE qPCR. SE
+%%%%HACE EL METODO DE DOBLE_DELTA_CT DE FORMA MANUAL. 
+
 \documentclass{article}
 \usepackage{underscore}
 \usepackage[utf8]{inputenc}
@@ -24,16 +30,6 @@
 \marginsize{3.0cm}{3.5cm}{2.5cm}{2.5cm}
 \renewcommand{\baselinestretch}{1.3} % per canviar interlineado
 \renewcommand*\footnoterule{}
-
-% \backgroundsetup{
-%   position={current page.south west},
-%   vshift=-22pt,
-%   hshift=98pt,
-%   angle= 90,
-%   contents = VHIR-UEB-FOR-013v.01,
-%   scale= 0.7,
-%   color= violet
-%   }
 
 \hypersetup{
   colorlinks=true,
@@ -116,7 +112,7 @@ En esta sección se proporcionan los resultados que se han obtenido al analizar 
 \begin{enumerate}
   \item $\Delta Ct $= Ct_{geninteres} - Ct_{endo}
   \item $\Delta \Delta Ct = \Delta Ct_{muestra1} - \Delta Ct_{calibrador}$ 
-  \item RQ = "Relative quantification" = $2^{-\Delta \Delta C_t}$
+  \item RQ = "Relative quantification" $=$ $2^{-\Delta \Delta C_t}$
 \end{enumerate}
 
 El valor de RQ es la tasa de cambio (o "fold change") de la muestra problema, comparada con la muestra calibradora (muestra no tratada, muestra de referencia,...). La muestra calibradora tiene un valor de RQ de 1, por lo que por ejemplo, un valor de RQ de 10 significa que el gen está 10 veces más expresado en la muestra problema que en la muestra calibradora y un RQ de 0.1, significa que el gen está 10 veces menos expresado).\\
@@ -331,7 +327,7 @@ postTexCG("taula3.tex")
 boxplot(unisp.ctl,las=2,col="darkviolet",main="Raw Ct's for RNA purification controls",ylab="Raw Ct values",cex.axis=0.4,cex.main=0.8)
 @
 
-Los controles UniSp 2CP, UniSp4 CP y UniSp 5CP son introducidos durante la extracción del RNA. La cocentración de cada uno es creciente, siendo el UniSp2 el de menor, el UniSp4 CP el intermedio y el UniSp5 CP el de mayor. Como se observa en la figura anterior el resultado es el esperado en cuanto a concentración creciente, aunque sí es importante remarcar que las concentraciones más bajas presentan más dispersión de los datos.
+Los controles UniSp 2CP, UniSp4 CP y UniSp 5CP son introducidos durante la extracción del RNA. La cocentración de cada uno es creciente, siendo el UniSp2 el de mayor, el UniSp4 CP el intermedio y el UniSp5 CP el de menor. Como se observa en la figura anterior el resultado es el esperado en cuanto a concentración creciente, aunque sí es importante remarcar que las concentraciones más bajas presentan más dispersión de los datos.
 
 \subsubsection{Expresión de los controles UniSp3 (IPC).}
 Este control es una sonda sintética incluída tres veces en cada tarjeta, y se utiliza para evaluar la eficiencia de la reacción de qPCR y como control interplaca.
