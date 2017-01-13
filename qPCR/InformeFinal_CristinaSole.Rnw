@@ -1,9 +1,3 @@
-%%%%AQUEST SCRIPT GENERA UN INFORME EN LATEX DE UN EXPERIMENT DE qPCR
-%%%%TAL COM ESTÀ ESTA PENSAT PER PLAQUES DE EXIQON, MES QUE RES PER QUE 
-%%%%MOLTS CONTROLS SON ESPECIFICS D'AQUESTES PLAQUES. TRAIENT AIXÒ ES PODRIA
-%%%%FER SERVIR PER QUALSEVOL TIPUS DE EXPERIMENT DE qPCR. SE
-%%%%HACE EL METODO DE DOBLE_DELTA_CT DE FORMA MANUAL. 
-
 \documentclass{article}
 \usepackage{underscore}
 \usepackage[utf8]{inputenc}
@@ -31,6 +25,16 @@
 \renewcommand{\baselinestretch}{1.3} % per canviar interlineado
 \renewcommand*\footnoterule{}
 
+% \backgroundsetup{
+%   position={current page.south west},
+%   vshift=-22pt,
+%   hshift=98pt,
+%   angle= 90,
+%   contents = VHIR-UEB-FOR-013v.01,
+%   scale= 0.7,
+%   color= violet
+%   }
+
 \hypersetup{
   colorlinks=true,
   linkcolor=violet
@@ -44,12 +48,10 @@
        \includegraphics[width=35mm]{images/IR.jpg}
        \end{figure}
        \vspace{1cm}
-       Estudio de la expressión diferencial\\
-       de miRNAs en muestras procedentes\\
-       de pacientes con Lupus\\
-       antes y después de un brote\\
+       Continuación estudio B2326:\\
+       Realización de Heatmaps y diagramas de Venn\\
        \footnotetext{\footnoterule{\tiny\textcolor{violet}{VHIR-UEB-FOR-013v.01}}}\\
-       {\normalsize Cristina Sole - B2326 }\\
+       {\normalsize Cristina Sole - B4040 }\\
        }
 
 
@@ -63,17 +65,25 @@
 
 \tableofcontents
 
-
 \newpage
 %--------------------------------------------------------------------------------------------------------------------------------------------
 \section{Introducción}
-%------------------------------------------------------------------------------------------------------------------------------------------
-Estudio sobre expressión de miRNA utilizando tecnología qPCR en placas de la casa comercial Exiqon,  en pacientes con Lupus eritomatoso, antes y después de un brote, y que han presentado remisión o no.
+%-------------------------------------------------------------------------------------------
+En octubre del 2016 se realizó un estudio de análisis de expresión diferencial de miRNAs utilizando la tecnología de qPCR (2016-B2326), con placas de la casa comercial Exiqon. En dicho estudio se realizaron una serie de comparaciones donde se obtuvieron una serie de listas de miRNAs diferencialmente expresados. En el presente estudio los investigadores están interesados en ver los genes comunes que existen entre varias de aquellas comparaciones (utilizando los Diagramas de Venn) y ver si existen clusters de expresión, mediante la representación de los heatmaps.
 
 %-----------------------
 \subsection{Objetivos}
 %-----------------------
-Las comparaciones en que están interesados los investigadores son las siguientes:
+Las comparaciones en que están interesados los investigadores en observar si hay genes comunes son las siguientes:
+
+\begin{enumerate}
+  \item (Brote Remisión vs Brote No Remisión) vs (PostBrote NoRemisión vs Brote NoRemisión)
+  \item (Brote Remisión vs Brote No Remisión) vs (PostBrote Remisión vs Brote Remisión) 
+  \item (Brote Remisión vs Brote No Remisión) vs (PostBrote Remisión vs PostBrote No Remisión)
+  \item (PostBrote NoRemisión vs Brote NoRemisión) vs (PostBrote Remisión vs Brote Remisión)
+\end{enumerate}
+
+Se realizarán heatmaps de todas las comparaciones individuales que se hicieron en el estudio anterior:
 
 \begin{itemize}
   \item Brote No Remisión vs PostBrote No Remisión 
@@ -85,43 +95,9 @@ Las comparaciones en que están interesados los investigadores son las siguiente
 %-----------------------
 \subsection{Los datos para el análisis}
 %-----------------------
-Los datos para el análisis han estado proporcionados por los investigadores en formato ``.txt''. Son 28 archivos, cada uno de ellos resultante de exportar los Cts, después de utilizar una placa prediseñada que contiene diferentes sondas para la detección de miRNAs, en el equipo 7000SDS de la UAT.\\
-Cada archivo corresponde a un paciente. Los placas se reparten en los siguientes grupos o condiciones:
+En el caso de la búsqueda de los genes comunes, los datos para el análisis son las listas de genes diferencialmente expresados ("TopTables") que se generaron en el estudio anterior, una para cada comparación.
 
-\begin{itemize}
-  \item \textbf{Grupo No Remisión}: 7 pacientes en dos condiciones
-    \begin{enumerate}
-     \item \textbf{Durante el brote}: NL011, NL021, NL031, NL041, NL051, NL061 y NL071
-     \item \textbf{Después del brote}: NL012, NL022, NL032, NL042, NL052, NL062 y NL072
-   \end{enumerate}
-  \item \textbf{Grupo Remisión}: 7 pacientes en dos condiciones
-    \begin{enumerate}
-       \item \textbf{Durante el brote}: NL081, NL091, NL101, NL111, NL121, NL131 y NL141
-       \item \textbf{Después del brote}: NL082, NL092, NL102, NL112, NL122, NL132 y NL142
-    \end{enumerate}
-\end{itemize}
-
-Para este estudio se dispone de un total de 14 pacientes, con dos placas realizadas para cada paciente.\\
-
-Todos los análisis han sido realizados con el programa estadístico ``R''( \textttt{\Sexpr{R.Version()$versi}, Copyright (C) 2015 The R Foundation for Statistical Computing} ).\\
-%-------------------------------------------------------------------------------------------------------------------------------------------
-\section{Análisis}
-%-------------------------------------------------------------------------------------------------------------------------------------------
-En esta sección se proporcionan los resultados que se han obtenido al analizar las muestras proporcionadas. Primero de todo se ha realizado un control de calidad exhaustivo para determinar si hay alguna muestra susceptible de ser eliminada del estudio con el objetivo de mejorar la calidad final del mismo. Posteriormente se procederá al cálculo de la cuantificación relativa (RQ = $2^{-\Delta\Delta C_t$}), según el método de Livak (\textit{Livak KJ,Schmittgen TD. Analysis of Relative Gene Expression Data Using Real-Time Quantitative PCR and the $2^{-\Delta\Delta Ct}$ Method. METHODS 25, 402-408 (2001)}), que se puede resumir de la siguiente manera:
-
-\begin{enumerate}
-  \item $\Delta Ct $= Ct_{geninteres} - Ct_{endo}
-  \item $\Delta \Delta Ct = \Delta Ct_{muestra1} - \Delta Ct_{calibrador}$ 
-  \item RQ = "Relative quantification" $=$ $2^{-\Delta \Delta C_t}$
-\end{enumerate}
-
-El valor de RQ es la tasa de cambio (o "fold change") de la muestra problema, comparada con la muestra calibradora (muestra no tratada, muestra de referencia,...). La muestra calibradora tiene un valor de RQ de 1, por lo que por ejemplo, un valor de RQ de 10 significa que el gen está 10 veces más expresado en la muestra problema que en la muestra calibradora y un RQ de 0.1, significa que el gen está 10 veces menos expresado).\\
-
-Una vez calculadas las expresiones relativas, se procederá a realizar un test estadístico (t de student en este caso) para determinar si hay diferencias entre los dos grupos de muestras que se comparan. Finalmente se representará gráficamente la expresión relativa, marcando aquellos miRNA que en el test hayan dado significativos.
-
-\subsection{Los datos:}
-Se procede a leer todos los archivos resultantes del procesamiento de cada placa y a unirlos en uno solo. En las columnas se pone el nombre de las muestras y en las filas los miRNAs analizados. A continuación se muestran las cinco primeras columnas del inicio y las cinco finales del final del archivo resultante (\textit{rawCts.csv}).
-
+A continuación se muestran las cinco primeras filas de cada uno de las listas utilizadas en el presente estudio (cuadro \ref{tab1}, cuadro \ref{tab2}, cuadro \ref{tab3}, cuadro \ref{tab4}):
 <<packages,echo=FALSE,message=FALSE>>=
 require(knitr)
 #require(stargazer)
@@ -129,6 +105,10 @@ require(compareGroups)
 library(xtable)
 require(devtools)
 #install_github("miriammota/mmotaF",force=TRUE)
+library(VennDiagram)
+library(gridExtra) #para poder añadir el título al gráfico
+library(gplots)
+library(RColorBrewer)
 @
 
 
@@ -142,752 +122,380 @@ Sys.setlocale("LC_TIME", "C")
 <<dir,echo=FALSE>>=
 workingDir <- getwd()
 dataDir <- file.path(workingDir, "dades")
-docsDir<-file.path(workingDir,"docs")
 resultsDir <- file.path(workingDir, "results")
 setwd(workingDir)
 @
 
 <<carregadades,echo=FALSE,results="hide">>=
-#llegim el targets
-targets<-read.csv(file.path(docsDir,"targets.csv"),header = TRUE, sep=";")
-
-#############################SCRIPT FERRAN PER LLEGIR DADES
-## Tenim counts per mostra en fitxers separats, que cal llegir i ajuntar en una mateixa taula
-## Llegir tots les mostres en serie:
-for (i in 1:length(list.files(path = dataDir))){
-  print(list.files(path = dataDir)[i])
-  data <- read.table(file=file.path(dataDir, list.files(path = dataDir)[i]), skip = 2, 
-                     header=TRUE, sep=",", dec=".")
-  #data <- data[order(data$Well),]
-  if (i==1){
-    Cts <- as.matrix(data$Ct)
-    rownames(Cts) <- data$Well
-    colnames(Cts) <- substr(list.files(path = dataDir)[i], 1, 5)
-    print(tail(Cts))
-  }
-  else{
-    Cts <- cbind(Cts, as.matrix(data$Ct))
-    colnames(Cts)[i] <- substr(list.files(path = dataDir)[i], 1, 5)
-    print(tail(Cts))
-  }
-}
-dim(Cts) #96 28
-
-## Llegir la llista de noms (han de ser 96)
-miRNames <- read.table(file.path(docsDir,"miRNAlist.txt"), header = FALSE, sep = "\t")$V1 # agafem la primera columna perque ens quedi un vector
-
-## I afegir-la com a noms de files de la matriu de Cts
-rownames(Cts) <- as.character(miRNames)
+#llegim les diferents toptables
+top1<-read.table(file.path(dataDir,"topTab_comp1_POSTBROT.NOvsBROT.NO.csv"),header = TRUE,sep="\t")
+top2<-read.table(file.path(dataDir,"topTab_comp2_POSTBROT.SIvsBROT.SI.csv"),header = TRUE,sep="\t")
+top3<-read.table(file.path(dataDir,"topTab_comp3_BROT.SIvsBROT.NO.csv"),header = TRUE,sep="\t")
+top4<-read.table(file.path(dataDir,"topTab_comp4_POSTBROT.SIvsPOSTBROT.NO.csv"),header = TRUE,sep="\t")
 @
 
 
 <<mostrararhcivo,results='asis'>>=
-xtable(head(Cts)[,1:5])
-xtable(tail(Cts)[,24:28])
+print(xtable(head(top1),caption="Primeras cinco filas de la comparación POSTBROT.NOvsBROT.NO", tabular.environment = 'longtable', floating = FALSE,size="tiny",label="tab1"))
+
+print(xtable(head(top2),caption="Primeras cinco filas de la comparación POSTBROT.SIvsBROT.SI", tabular.environment = 'longtable', floating = FALSE,size="tiny",label="tab2"))
+
+print(xtable(head(top3),caption="Primeras cinco filas de la comparación BROT.SIvsBROT.NO", tabular.environment = 'longtable', floating = FALSE,size="tiny",label="tab3"))
+
+print(xtable(head(top4),caption="Primeras cinco filas de la comparación POSTBROT.SIvsPOSTBROT.NO", tabular.environment = 'longtable', floating = FALSE,size="tiny",label="tab4"))
 @
-
-<<guardadades,echo=FALSE>>=
-## com a R data
-save(Cts, file="rawCts.RData")
-
-## com a taula csv
-newCts <- cbind(rownames(Cts), Cts)
-colnames(newCts)[1] <- "detector"
-
-#head(newCts)
-write.table(newCts, file = "rawCts.csv", quote = FALSE, 
-            sep="\t", dec=".", row.names = FALSE, col.names = TRUE)
-@
-
-<<preparadades,echo=FALSE>>=
-#Definim les matrius per mostra i per detector, per poder aprofitar el codi de l'estudi de l'A.Meseguer
-cts.bySamp <- as.matrix(Cts)
-cts.byGene <- t(as.matrix(Cts))
-@
-
-\newpage
-%-----------------------
-\subsection{Control de Calidad}
-%-----------------------
-Se realizan algunos gráficos de control de calidad que nos permitirán conocer la calidad y la estructura de las muestras. Se realiza una descripción numérica de los Cts para cada una de las muestras, diagramas de cajas para cada una de las muestras, número de NAs (miRNA donde el valor de CT es 40 o superior) en las muestras y se mirarán algunos de los controles que incluye la casa Exiqon en las tarjetas. 
-
-\subsubsection{Análisis de componentes principales de las muestras:}
-Se realiza un análisis de componentes principales para ver la diferente agrupación de las muestras.
-
-<<colors,echo=FALSE,message=FALSE>>=
-## definim colors a mida
-samp.col <- as.character(targets$Color)
-gene.col <- c(rainbow(dim(cts.byGene)[2]+8)) # el +8 es tema estetic
-@
-
-<<pca,fig.height=4.5,fig.width=4.5,fig.align='center'>>=
-#primer definim la funció
-#vigilar los "ylim". Habría que definirlos en cada caso
-plotPCA <- function ( X, labels=NULL, colors=NULL, var = "",dataDesc="", scale=FALSE, formapunts=NULL, myCex=NULL,...)
-{
-  pcX<-prcomp(t(X))
-  loads<- round(pcX$sdev^2/sum(pcX$sdev^2)*100,1)
-  xlab<-c(paste("PC1",loads[1],"%"))
-  ylab<-c(paste("PC2",loads[2],"%"))
- if (is.null(colors)) colors=colores
-  plot(pcX$x[,1:2],xlab=xlab,ylab=ylab,
-        xlim=c(min(pcX$x[,1])-5,max(pcX$x[,1])+5),ylim=c(-35,50),pch=formapunts, col=colors)
-        text(pcX$x[,1],pcX$x[,2],labels,pos=3,cex=myCex, col=colors)
-  title(paste(var, dataDesc, sep=" "), cex=0.2)
-}
-
-#color2pca<-c("blue","red","blue","red","blue","red","blue","red","blue","red","blue","red","blue","red","darkgreen","black","darkgreen","black","darkgreen","black","darkgreen","black","darkgreen","black","darkgreen","black","darkgreen","black")
-forma2pca<-c(15,16,15,16,15,16,15,16,15,16,15,16,15,16,17,18,17,18,17,18,17,18,17,18,17,18,17,18)
-#plotPCA(X=na.omit(cts.bySamp), labels=targets$ShorName, dataDesc="Principal Component Analysis for samples",var = "", myCex=0.6, colors = color2pca,formapunts=forma2pca)
-#legend("topright", c("BROT.NO","POSTBROT.NO","BROT.SI","POSTBROT.SI"), col=c("blue","red","darkgreen","black"), pch=c(1,2,3,4))
-
-plotPCA(X=na.omit(cts.bySamp), labels=targets$ShorName, dataDesc="Principal Component Analysis for samples",var = "", myCex=0.6, colors = samp.col,formapunts=forma2pca)
-legend("topright", c("BROT.NO","POSTBROT.NO","BROT.SI","POSTBROT.SI"), col=c("lightblue","darkblue","lightgreen","darkgreen"), pch=c(15,16,17,18),cex=0.5)
-@
-
-El análisis de componenentes principales separa por la primera componente, con un 34\% de la variabilidad total, a la mayoría de muestras con brote y remisión a un lado y a las muestras de brote sin remisión al otro. Se observa que la muestra \texttt{NL022.NO} se separa claramente del resto de muestras.
-
-
-\subsubsection{Resumen numérico de los Cts para cada una de las muestras:}
-<<renum,results='asis'>>=
-#stargazer(cts.bySamp,title="Resumen numérico de los Cts para cada muestra",summary=TRUE)
-tab<-compareGroups(cts.bySamp)
-tab2<-createTable(tab)
-export2latex(tab2,header = c('all'="Mean (SD)"),file = "taula1.tex")
-library(mmotaF)
-postTexCG("taula1.tex")
-@
-
-\input{taula1.tex}
-
-\subsubsection{Diagrama de cajas de los Cts para cada una de las muestras:}
-
-<<boxplot1>>=
-## fem grafiques de Ct 
-boxplot(cts.bySamp, las = 2, col = samp.col, main = "Raw Ct values by sample",cex.axis=0.5)
-legend("bottom", legend=unique(targets$Group), fill = unique(samp.col),cex=0.4)
-@
-
-En la anterior gráfica se observa que por ejemplo las muestras \texttt{NL022} y \texttt{NL111} presentan una dispersión de los datos mayor que en las otras.
-
-\subsubsection{Número de NAs en cada una de las muestras:}
-<<Nacount,echo=FALSE,message=FALSE>>=
-na_count<-apply(cts.bySamp,2,function(x) length(which(is.na(x))))
-#na_count<-na_count)
-#na_count
-
-barplot(na_count,las=2,col = samp.col,main="NA's number by sample",cex.axis = 0.7,cex.names=0.6)
-legend("topright", legend = unique(targets$Group), fill = unique(samp.col),cex=0.75)
-@
-
-
-Se observa en la figura anterior que la muestra \texttt{NL022} presenta un elevado número de NAs en comparación al resto de muestras. La siguiente muestra que presenta más NAs es la muestra \texttt{NL042}.
-
-\subsubsection{Resumen numérico de los Cts para cada uno de los miRNA:}
-<<renum2,results='asis',message=FALSE>>=
-tabgen<-compareGroups(cts.byGene)
-tabgen2<-createTable(tabgen)
-export2latex(tabgen2,header = c('all'="Mean (SD)"),file = "taula2.tex")
-postTexCG("taula2.tex")
-@
-
-\input{taula2.tex}
-
-\subsubsection{Diagrama de cajas de los Cts para cada uno de los miRNA:}
-<<boxplot5,fig.align='center',fig.width=6.5>>=
-boxplot(cts.byGene, las = 2, col = gene.col, main = "Boxplot of raw Ct values by miRNA", cex.axis=0.4)
-@
-
-En el gráfico anterior se observa como la mayoría de los Cts para los diferentes miRNA se concentran entre los valores 20 y 30, encontrándose de todas maneras unos cercanos a 40 (\texttt{hsa-mir-145} y \texttt{Cel-mir-39-3p CP}).
-
-\subsubsection{Número de NAs en cada uno de los miRNA:}
-<<Nacountgenes,echo=FALSE,message=FALSE,fig.align='center',fig.width=6.5>>=
-na_count_genes<-apply(cts.byGene,2,function(x) length(which(is.na(x))))
-barplot(na_count_genes,las=2,col = gene.col,main="NA's number by miRNA",cex.axis = 0.7,cex.names=0.4)
-#na_count<-na_count
-#na_count
-@
-
-Como se observa en la figura anterior, no hay ningún miRNA que de manera habitual haya tenido valores de Ct superiores a 40, en las sucesivas tarjetas que se han procesado. 
-
-\subsubsection{Expresión de los controles UniSp2 C, UniSp4 C y UniSp5 C.}
-Estos tres controles son sondas sintéticas que vienen con el kit y servirán para evaluar el paso de preparación de la muestra. 
-
-<<renum3,results='asis',message=FALSE>>=
-unisp.ctl<-cts.byGene[,c(93:95)]
-tabunisp<-compareGroups(unisp.ctl)
-tabunisp2<-createTable(tabunisp)
-export2latex(tabunisp2,header = c('all'="Mean (SD)"),file = "taula3.tex")
-postTexCG("taula3.tex")
-@
-
-\input{taula3.tex}
-
-<<intctl1,fig.align='center'>>=
-boxplot(unisp.ctl,las=2,col="darkviolet",main="Raw Ct's for RNA purification controls",ylab="Raw Ct values",cex.axis=0.4,cex.main=0.8)
-@
-
-Los controles UniSp 2CP, UniSp4 CP y UniSp 5CP son introducidos durante la extracción del RNA. La cocentración de cada uno es creciente, siendo el UniSp2 el de mayor, el UniSp4 CP el intermedio y el UniSp5 CP el de menor. Como se observa en la figura anterior el resultado es el esperado en cuanto a concentración creciente, aunque sí es importante remarcar que las concentraciones más bajas presentan más dispersión de los datos.
-
-\subsubsection{Expresión de los controles UniSp3 (IPC).}
-Este control es una sonda sintética incluída tres veces en cada tarjeta, y se utiliza para evaluar la eficiencia de la reacción de qPCR y como control interplaca.
-<<ctlunisp3,results='asis',message=FALSE>>=
-unisp3.ctl<-cts.byGene[,c(12,36,48)]
-unisp3.ctl<-data.frame(unisp3.ctl)
-#stargazer(unisp3.ctl,summary =TRUE,title = "Resumen del control UniSp3 (IPC)") amb això hem vist que les tres columnes són molt semblants...llavors les sumen i ens quedem amb una que serà més facil per fer les gràfiques
-colnames(unisp3.ctl)<-c("Unisp3.1","Unisp3.2","Unisp3.3")
-unisp3.ctl$UniSp3<-(as.numeric(unisp3.ctl$Unisp3.1) + as.numeric(unisp3.ctl$Unisp3.2)+ as.numeric(unisp3.ctl$Unisp3.3))/3
-hola<-data.frame(unisp3.ctl$UniSp3)
-colnames(hola)<-"UniSp3 (IPC)"
-tabhola<-compareGroups(hola)
-tabhola2<-createTable(tabhola)
-export2latex(tabhola2,header = c('all'="Mean (SD)"),file = "taula4.tex")
-postTexCG("taula4.tex")
-@
-
-\input{taula4.tex}
-
-<<unisp3plot,message=FALSE>>=
-barplot(unisp3.ctl$UniSp3,main="Raw Ct values for UniSp3 (IPC) control",ylab="Raw Ct values",xlab="Samples",col=samp.col)
-@
-
-Como se puede observar tanto en la tabla resumen (cuadro 4) como en la figura anterior, el control UniSp3 (IPC) se comporta de la misma manera en todas las muestras (o placas). 
-
-\subsubsection{Expresión de los controles UniSp6 y cel-39-3p.}
-Estos dos controles se añaden en el momento de la síntesis de cDNA y servirán para verificar que no ha habido inhibición en este paso y la eficiencia del mismo.
-
-<<unisp6,results='asis'>>=
-#which(colnames(cts.byGene) == "UniSp6 CP") 24
-#which(colnames(cts.byGene) == "Cel-miR-39-3p CP") 92
-unisp6.mir39<-cts.byGene[,c(24,92)]
-unisp6.mir39<-data.frame(unisp6.mir39)
-tabunisp6<-compareGroups(unisp6.mir39)
-tabunisp62<-createTable(tabunisp6)
-export2latex(tabunisp62,header = c('all'="Mean (SD)"),file = "taula5.tex")
-postTexCG("taula5.tex")
-@
-
-\input{taula5.tex}
-
-<<unisp6plot,message=FALSE>>=
-a<-barplot(as.matrix(unisp6.mir39),main="Ct for UniSp6 C and Cel-miR-39-3p CP controls",ylab="Raw Ct values",col=samp.col,beside=TRUE)
-text(a,as.matrix(unisp6.mir39),labels = rownames(unisp6.mir39),pos=3,cex=0.5,srt=90)
-@
-
-Como se puede observar en la figura anterior hay mucha variabilidad entre los Ct's para estos dos controles, indicando que puede haber existido algún tipo de  inhibición en la síntesis de cDNA. Además, existen varias muestras donde no se encuentran Ct's inferiores a 40 para el control UniSp6 C y en otros casos para el control  Cel-miR-39-3p CP. Hay que remarcar el caso de la muestra \texttt{NL091} ya que no se observan Cts ni para un control ni para el otro.
-
-\subsubsection{Expresión del control miR-30c.}
-Este miRNA se ha visto que está presente de forma habitual en muestras de orina, por lo que se expera que esté expresado en todas las muestras.
-
-<<mir30,results='asis'>>=
-#which(colnames(cts.byGene) == "hsa-miR-30c-5p") 69
-mir30.ctl<-cts.byGene[,c(69)]
-mir30.ctl<-data.frame(mir30.ctl)
-colnames(mir30.ctl)<-"miR-30c"
-tabmir<-compareGroups(mir30.ctl)
-tabmir2<-createTable(tabmir)
-export2latex(tabmir2,header = c('all'="Mean (SD)"),file = "taula6.tex")
-postTexCG("taula6.tex")
-@
-
-\input{taula6.tex}
-
-<<mir30plot,message=FALSE>>=
-a<-barplot(as.matrix(mir30.ctl),main="Raw Ct values for miR-30c control",ylab="Raw Ct values",col=samp.col,xlab="Samples",beside=TRUE)
-text(a,as.matrix(mir30.ctl),labels = rownames(mir30.ctl),pos=3,cex=0.5,srt=90)
-@
-
-
-Como se observa en la figura anterior todas las muestras presentan expresión del miRNA exceptuando la muestra \texttt{NL022}.\\
 \\
-\textbf{CONCLUSIONES DEL CONTROL DE CALIDAD}
-\newline
-En los controles de calidad que se han realizado se ha podido observar que:
-\begin{itemize}
-  \item Las muestras \texttt{NL022} y \texttt{NL111} presentan mucha variabilidad en los valores obtenidos de Ct en las diferentes muestras
-  \item El número de valores de Ct superiores a 40 (número de NA) es muy elevado en la muestra \texttt{NL022}.
-  \item El control \texttt{UniSp6 C} presenta un número relativamente elevado de valores de Ct por encima de 40.
-  \item Todos los genes presentan mucha variabilidad entre las diferentes placas, exceptuando el control \texttt{UniSp3 (IPC)}
-  \item Los controles de la retrotranscripción (\texttt{UniSp6} y \texttt{Cel-miR-39-3p CP}) presentan mucha variabilidad en general, lo que indica que este paso no ha ido muy bien. Especialmente en la muestra \texttt{NL091}, donde no se observa expresión de ninguno de los dos.
-  \item No se observa expresión del \texttt{miR30c} (gen específico de orina) en la muestra \texttt{Nl022}.
-  \item \textbf{Se decide eliminar del estudio la muestra \texttt{NL022} del estudio y también la muestra \texttt{NL021} en aquellas comparaciones que sean apareadas.}
-  \item \textbf{Se decide utilizar el control \texttt{UniSp3 (IPC)} como normalizador ya que se ha visto que es el que menos variabilidad tiene.}
-\end{itemize}
 
+En el caso de los heatmaps, los datos para el análisis, son los datos de valores de Ct normalizados del estudio anterior. Se preparan dos archivos de datos normalizados, uno dónde no está la muestra NL022, y otro donde además tampoco está la muestra NL021, descartadas en el estudio anterior por motivos de calidad.
 
-\subsection{Normalización de los datos}
-Como se ha comentado previamente el miRNA que se ha visto con menor variabilidad es el \texttt{UniSp3 (IPC)} que se utilizará como control endógeno. A los valores de Ct de cada miRNA  se restará el valor de la media de este control (ya que encada placa se encuentra 3 veces) que haya salido en cada placa.
-
-<<norma1>>=
-#se calcula en un vector la media de los tres valores del control para cada muestra/placa
-endo.vals <- colMeans(Cts[which(rownames(Cts) == "UniSp3 IPC"),])
-## per operar amb la funcio sweep sobre les columnes de la matriu de cts, 
-## restant els endo.vals de cada columna
-dCts <- sweep(as.matrix(Cts), 2, endo.vals, "-")
-#show(dCts)
-#boxplot(t(dCts)) conesto comprobamos que los valores del control son casi 0
-
-## retirem el gen unisp3 de la matriu de dades (ja que tot val 0)
-## també es retiren la resta de controls unisp y  el "Blank"
-#dim(dCts) 96 28
-dCts <- dCts[-which(rownames(dCts)=="UniSp3 IPC" | rownames(dCts)=="UniSp5 CP" | rownames(dCts)=="UniSp4 CP" | rownames(dCts)=="UniSp2 CP" | rownames(dCts)=="Cel-miR-39-3p CP" | rownames(dCts)=="UniSp6 CP" |rownames(dCts)=="Blank"),]
-#dim(dCts) 87 28
-##se retira la mostra Nl022 de la matriu de dades y se crean dos dataframes en el caso que se retire tb su pareja
-dCts <- dCts[,-which(colnames(dCts)=="NL022")]
-#dim(dCts)87 27
-#modifiquem i creem un nou targets en consequencia
-targets1<-targets[-which(targets$FileName=="NL022.csv"),]
-#dim(targets)
-#dim(targets1)27 7
-
-#es treu tb la mostra nl021 per les paired
-dCts.wo <- dCts[,-which(colnames(dCts)=="NL021")]
-#dim(dCts.wo)87 26
-#modifiquem el targets en consequencia
-targets2<-targets1[-which(targets1$FileName=="NL021.csv"),]
-#dim(targets2)26 7
-@
-
-Se muestra el valor de los datos normalizados por miRNA en forma numérica y en forma gráfica:
-
-<<norma3,results='asis',message=FALSE>>=
-dCts.byGene <- t(dCts)
-#stargazer(dCts.byGene,summary =TRUE,title = "Resumen de los valores una vez normalizados por miRNA")
-tabdCtsgene<-compareGroups(dCts.byGene)
-tabdCtsgene2<-createTable(tabdCtsgene)
-export2latex(tabdCtsgene2,header = c('all'="Mean (SD)"),file = "taula7.tex")
-postTexCG("taula7.tex")
-@
-
-\input{taula7.tex}
-
-<<normaplot2,fig.align='center',fig.width=7>>=
-boxplot(dCts.byGene, las = 2, col = gene.col, main = "deltaCt (normalized) values by miRNA",cex.axis=0.5)
-@
-
-\subsection{Comparaciones}
-En esta sección se describirán los resultados obtenidos al realizar las diferentes comparaciones planteadas. Para cada una de las comparaciones se mostrará el gráfico de cajas para los valores de ddCt de cada uno de los miRNA, la lista de los 25 primeros miRNA ordenados según el pvalor (los más diferencialmente expresados), junto con la gráfica de RQ.\\
-Recordamos las comparaciones separándolas entre las que son apareadas (donde se excluirán las muestras \texttt{NL021} y la \texttt{NL022}) y las que no lo son (se harán sin la muestra \texttt{NL022}):
-\begin{itemize}
-  \item Comparaciones con muestras apareadas:
-    \begin{enumerate}
-      \item PostBrote NoRemisión vs  Brote NoRemisión = POSTBROT.NO vs BROT.NO
-      \item PostBrote Remisión vs Brote Remisión = POSTBROT.SI vs BROT.SI
-    \end{enumerate}
-  \item Comparaciones con muestras no apareadas:
-    \begin{enumerate}
-      \item Brote Remisión vs Brote NoRemisión = BROT.SI vs BROT.NO
-      \item PostBrote Remisión vs PostBrote NoRemisión = POSTBROT.SI vs POSTBROT.NO
-    \end{enumerate} 
-\end{itemize}
-
-\newpage
-
- \subsubsection{Comparación 1: PostBrote NoRemisión vs  Brote NoRemisión.}
-Se comparan las muestras del grupo ``PostBrote NoRemisión'' con las del grupo ``Brote NORemisión''. Se ha utilizado el test estadístico t-student para muestras apareadas. El gráfico de cajas para los ddCt de cada uno de los miRNA es el siguiente:
-<<comparacion1>>=
-#Primer doncs, calculem les mitjanes per gen del grup control (BROT.NO en aquest cas)
-## mirem quines mostres estan implicades
-BROT_NO<-which(targets2$Group == "BROT.NO")
-
-## calculem la mitjana dels controls (POSTBROT.NO en aquest cas) per cada gen controlan pels NA
-#dCts.wo[ , which(targets2$Group == "BROT.NO")]
-mean.BROT.NO <- apply(dCts.wo[ , which(targets2$Group == "BROT.NO")], 1, mean, na.rm=TRUE)
-#mean.BROT.NO
-
-#després, calculem les ddCts de les mostres POSTBROT.NO restant la mitjana de cada gen control obtinguda just abans
-## mirem quines mostres estan implicades
-POSTBROT_NO<-which(targets2$Group == "POSTBROT.NO")
-
-## calculem el doble delta Ct de cada gen en la comparacio POSTBROT.NO - BROT.NO controlant pels NA (=40)
-POSTBROT_NO2<-dCts.wo[ , which(targets2$Group == "POSTBROT.NO")]
-ddCts.wo.POSTvsBROT.NO <- ifelse(is.na(dCts.wo[ , which(targets2$Group == "POSTBROT.NO")]),40,dCts.wo[ , which(targets2$Group == "POSTBROT.NO")]) - mean.BROT.NO
-@
-
-<<graficsddCtwo,fig.width=7,fig.height=7>>=
-#i procedim a fer els gràfics corresponents pels ddCts
-boxplot(t(ddCts.wo.POSTvsBROT.NO), las = 2, col = gene.col, main = "ddCt values by gene in POSTBROT.NO - BROT.NO",cex.axis=0.4,cex.main=0.9)
-abline(h = 0, lty = 2)
-
-#grafica parecida hecha a mano
-mean.ddCts.wo.POSTvsBROT.NO <- apply(ddCts.wo.POSTvsBROT.NO, 1, mean)
-#sd.ddCts.wo.POSTvsBROT.NO <- apply(ddCts.wo.POSTvsBROT.NO, 1, sd)
-#plot(1:length(row.names(ddCts.wo.POSTvsBROT.NO)), mean.ddCts.wo.POSTvsBROT.NO, xaxt='n', 
-#     pch=15, col = gene.col, main = "Mean ddCt values by gene in POSTBROT.NO - BROT.NO", 
-#     ylab = "Mean ddCt (+/-SD)", xlab="", ylim = c(-5,7))
-#axis(1, at = 1:length(row.names(ddCts.wo.POSTvsBROT.NO)), labels = row.names(ddCts.wo.POSTvsBROT.NO), las = 2,cex.axis=0.4)
-#arrows(1:length(row.names(ddCts.wo.POSTvsBROT.NO)), mean.ddCts.wo.POSTvsBROT.NO-sd.ddCts.wo.POSTvsBROT.NO, 
-#       1:length(row.names(ddCts.wo.POSTvsBROT.NO)), mean.ddCts.wo.POSTvsBROT.NO+sd.ddCts.wo.POSTvsBROT.NO, 
-#       length=0.05, angle=90, code=3)
-#abline(h = 0, lty = 2)
-@
-
-<<test>>=
-#Fem els test per veure si els dCts dels grups de la comparació són o no diferents (que equival a veure si els ddCts son o no 0, ja que A==B es pot veure com A-B==0). I aprofitem el loop per registrar els resultats de mean(ddCt), FoldChange (=RQ, =2^-ddCt), i p-valor de cada gen per a aquesta comparació.
-
-## definim els RQs i muntem la taula de resultats (top table)
-RQs <- 2^-mean.ddCts.wo.POSTvsBROT.NO
-#genes <- gene.names[-which(gene.names=="Ppia")]
-genes<-rownames(dCts.wo)
-topTab <- data.frame(gene=genes, ddCt=mean.ddCts.wo.POSTvsBROT.NO, RQ=RQs, pVal=rep(NA,length(genes)))
-#topTab
-
-## donem un cop d'ull als valors a comparar
-#dCts["Lep" , which(targets$Grup == "TG_CHOW")]
-#dCts["Lep" , which(targets$Grup == "WT_CHOW")]
-## i fem el loop del test de wilcoxon per comparacio de mitjanes per obtenir els p-valors
-for (i in 1:nrow(dCts.wo)){
-  res <- t.test(dCts.wo[i , which(targets2$Group == "POSTBROT.NO")], 
-              dCts.wo[i , which(targets2$Group == "BROT.NO")],
-              paired = TRUE)
-  topTab[i,"pVal"] <- res$p.value
-}
-sortTab <- topTab[with(topTab, order(pVal)), ]
-#show(sortTab)
-
-## i exportem la taula a fitxer csv
-write.table(sortTab, file = "topTab_comp1_POSTBROT.NOvsBROT.NO.csv", 
-            sep = "\t", dec = ".", row.names = FALSE, col.names = TRUE, quote = FALSE)
-@
-
-La tabla de los miRNA ordenados según valor creciente de pvalor es la siguiente:
-<<showTop,results='asis'>>=
-xtable(sortTab[1:25,],digits=5)
+<<loaddata2>>=
+normData1<-read.csv2(file.path(dataDir,"normdata.dCts.csv"),header = TRUE,sep=";")
+normData2<-read.csv2(file.path(dataDir,"normdata.dCts.wo.csv"),header = TRUE,sep=";")
 @
 
 \newpage
-En esta comparación los miRNA \texttt{hsa-miR-26b-5p}, \texttt{hsa-miR-15a-5p}, \texttt{hsa-miR-10a-5p}, \texttt{hsa- miR-31-3p}, \texttt{hsa-miR-22-5p}, \texttt{hsa-miR-148-3p}, \texttt{hsa-miR-99b-5p}, \texttt{hsa-miR-195-5p} y \texttt{hsa-miR-25-3p} se pueden considerar diferencialmente expresados asumiendo un pvalor inferior a 0.05.\\
-A continuación se muestra la gráfica conocida como RQ o de "fold change" de las muestras POSTBROT.NO relativas a BROT.NO. Con un asterísco se marcan a aquellos miRNA diferencialmente expresados.
-
-<<graficRQ,fig.width=7,fig.height=7>>=
-#Per acabar, grafiquem els RQ
-## fer el grafic
-plot(1:length(names(RQs)), RQs, xaxt='n', log = "y", ylim = c(0.1, 10), 
-     pch=15, col = gene.col, main = "RQ by gene in POSTBROT.NOvsBROT.NO", 
-     ylab = "RQ", xlab="")
-abline(h = 1, lty = 2)
-axis(1, at = 1:length(row.names(ddCts.wo.POSTvsBROT.NO)), labels = row.names(ddCts.wo.POSTvsBROT.NO), las = 2,cex.axis=0.4)
-arrows(1:length(names(RQs)), RQs, 
-       1:length(names(RQs)), 1, 
-       length=0, lwd = 4, col = gene.col, angle=90, code=3)
-pos.x <- which(topTab$pVal<0.05 & topTab$ddCt<0) # els de ddCt negatiu seran els de FC positiu
-neg.x <- which(topTab$pVal<0.05 & topTab$ddCt>0) # els de ddCt negatiu seran els de FC negatiu
-pos.y <- RQs[pos.x]+0.5
-neg.y <- RQs[neg.x]-0.5
-##per colocar el "*" en cada barra que 
-#if (length(pos.x)>0) {text(pos.x, y = pos.y, "*")}
-if (length(pos.x)>0) {text(pos.x, y = 0.95, "*")}
-#if (length(neg.x)>0) {text(neg.x, y = neg.y, "*")}
-if (length(neg.x)>0) {text(neg.x, y = 1.05, "*")}
-@
-\newpage
-
-\subsubsection{Comparación 2: PostBrote Remisión vs Brote Remisión}
-  Se comparan las muestras del grupo ``PostBrote Remisión'' con las del grupo ``Brote Remisión''. Se ha utilizado el test estadístico t-student para muestras apareadas. El gráfico de cajas para los ddCt de cada uno de los miRNA es el siguiente:
-<<comparacion2>>=
-#Primer doncs, calculem les mitjanes per gen del grup control (BROT.SI en aquest cas)
-## mirem quines mostres estan implicades
-BROT_SI<-which(targets2$Group == "BROT.SI")
-
-## calculem la mitjana dels controls (BROT.SI en aquest cas) per cada gen controlan pels NA
-#dCts.wo[ , which(targets2$Group == "BROT.SI")]
-mean.BROT.SI <- apply(dCts.wo[ , which(targets2$Group == "BROT.SI")], 1, mean, na.rm=TRUE)
-#mean.BROT.SI
-
-#després, calculem les ddCts de les mostres POSTBROT.SI restant la mitjana de cada gen control obtinguda just abans
-## mirem quines mostres estan implicades
-POSTBROT_SI<-which(targets2$Group == "POSTBROT.SI")
-
-## calculem el doble delta Ct de cada gen en la comparacio POSTBROT.SI - BROT.SI controlant pels NA)=40)
-POSTBROT_SI2<-dCts.wo[ , which(targets2$Group == "POSTBROT.SI")]
-ddCts.wo.POSTvsBROT.SI <- ifelse(is.na(dCts.wo[ , which(targets2$Group == "POSTBROT.SI")]),40,dCts.wo[ , which(targets2$Group == "POSTBROT.SI")]) - mean.BROT.SI
-@
-
-<<graficsddCt2,fig.width=7,fig.height=7>>=
-#i procedim a fer els gràfics corresponents pels ddCts
-boxplot(t(ddCts.wo.POSTvsBROT.SI), las = 2, col = gene.col, main = "ddCt values by gene in POSTBROT.SI - BROT.SI",cex.axis=0.4,cex.main=0.9)
-abline(h = 0, lty = 2)
-
-#grafica parecida hecha a mano
-mean.ddCts.wo.POSTvsBROT.SI <- apply(ddCts.wo.POSTvsBROT.SI, 1, mean)
-#sd.ddCts.wo.POSTvsBROT.NO <- apply(ddCts.wo.POSTvsBROT.NO, 1, sd)
-#plot(1:length(row.names(ddCts.wo.POSTvsBROT.NO)), mean.ddCts.wo.POSTvsBROT.NO, xaxt='n', 
-#     pch=15, col = gene.col, main = "Mean ddCt values by gene in POSTBROT.NO - BROT.NO", 
-#     ylab = "Mean ddCt (+/-SD)", xlab="", ylim = c(-5,7))
-#axis(1, at = 1:length(row.names(ddCts.wo.POSTvsBROT.NO)), labels = row.names(ddCts.wo.POSTvsBROT.NO), las = 2,cex.axis=0.4)
-#arrows(1:length(row.names(ddCts.wo.POSTvsBROT.NO)), mean.ddCts.wo.POSTvsBROT.NO-sd.ddCts.wo.POSTvsBROT.NO, 
-#       1:length(row.names(ddCts.wo.POSTvsBROT.NO)), mean.ddCts.wo.POSTvsBROT.NO+sd.ddCts.wo.POSTvsBROT.NO, 
-#       length=0.05, angle=90, code=3)
-#abline(h = 0, lty = 2)
-@
-
-
-<<test2>>=
-#Fem els test per veure si els dCts dels grups de la comparació són o no diferents (que equival a veure si els ddCts son o no 0, ja que A==B es pot veure com A-B==0). I aprofitem el loop per registrar els resultats de mean(ddCt), FoldChange (=RQ, =2^-ddCt), i p-valor de cada gen per a aquesta comparació.
-
-## definim els RQs i muntem la taula de resultats (top table)
-RQs2 <- 2^-mean.ddCts.wo.POSTvsBROT.SI
-#genes <- gene.names[-which(gene.names=="Ppia")]
-genes<-rownames(dCts.wo)
-topTab2 <- data.frame(gene=genes, ddCt=mean.ddCts.wo.POSTvsBROT.SI, RQ=RQs2, pVal=rep(NA,length(genes)))
-#topTab2
-
-## i fem el loop del test de wilcoxon per comparacio de mitjanes per obtenir els p-valors
-for (i in 1:nrow(dCts.wo)){
-  res <- t.test(dCts.wo[i , which(targets2$Group == "POSTBROT.SI")], 
-              dCts.wo[i , which(targets2$Group == "BROT.SI")],
-              paired = TRUE)
-  topTab2[i,"pVal"] <- res$p.value
-}
-sortTab2 <- topTab2[with(topTab2, order(pVal)), ]
-#show(sortTab2)
-
-## i exportem la taula a fitxer csv
-write.table(sortTab2, file = "topTab_comp2_POSTBROT.SIvsBROT.SI.csv", 
-            sep = "\t", dec = ".", row.names = FALSE, col.names = TRUE, quote = FALSE)
-@
-
-La tabla de los miRNA ordenados según valor creciente de pvalor es la siguiente:
-\newpage
-<<showTop2,results='asis'>>=
-xtable(sortTab2[1:25,],digits=5)
-@
-
-En esta comparación los miRNA \texttt{hsa-miR-107}, \texttt{hsa-miR-203a}, \texttt{hsa-miR-378a-3p}, \texttt{hsa-mi R-17-5p}, \texttt{hsa-let-7b-5p}, \texttt{hsa-miR-195-5p}, \texttt{hsa-miR-532-5p}, \texttt{hsa-miR-29a-3p}, \texttt{hsa-miR-29b-3p}, \texttt{hsa-miR-135b-5p}, \texttt{hsa-miR-598} y \texttt{hsa-miR-31-5p} se pueden considerar diferencialmente expresados asumiendo un pvalor inferior a 0.05.\\
-A continuación se muestra la gráfica conocida como RQ o de "fold change" de las muestras POSTBROT.SI relativas a BROT.SI.
-
-<<graficRQ2,fig.width=7,fig.height=7>>=
-#Per acabar, grafiquem els RQ
-plot(1:length(names(RQs2)), RQs2, xaxt='n', log = "y", ylim = c(0.1, 10), 
-     pch=15, col = gene.col, main = "RQ by gene in POSTBROT.SIvsBROT.SI", 
-     ylab = "RQ", xlab="")
-abline(h = 1, lty = 2)
-axis(1, at = 1:length(row.names(ddCts.wo.POSTvsBROT.SI)), labels = row.names(ddCts.wo.POSTvsBROT.SI), las = 2,cex.axis=0.4)
-arrows(1:length(names(RQs2)), RQs2, 
-       1:length(names(RQs2)), 1, 
-       length=0, lwd = 4, col = gene.col, angle=90, code=3)
-pos.x <- which(topTab2$pVal<0.05 & topTab2$ddCt<0) # els de ddCt negatiu seran els de FC positiu
-neg.x <- which(topTab2$pVal<0.05 & topTab2$ddCt>0) # els de ddCt negatiu seran els de FC negatiu
-pos.y <- RQs2[pos.x]+0.5
-neg.y <- RQs2[neg.x]-0.5
-##per colocar el "*" en cada barra que 
-#if (length(pos.x)>0) {text(pos.x, y = pos.y, "*")}
-if (length(pos.x)>0) {text(pos.x, y = 0.95, "*")}
-#if (length(neg.x)>0) {text(neg.x, y = neg.y, "*")}
-if (length(neg.x)>0) {text(neg.x, y = 1.05, "*")}
-@
-
-\newpage
-
-\subsubsection{Comparación 3: Brote Remisión vs Brote NoRemisión}
-   Se comparan las muestras del grupo ``Brote Remisión'' con las del grupo ``Brote NoRemisión''. Se ha utilizado el test estadístico t-student para muestras no apareadas. El gráfico de cajas para los ddCt de cada uno de los miRNA es el siguiente:
-<<comparacion3>>=
-#Primer doncs, calculem les mitjanes per gen del grup control (BROT.NO en aquest cas)
-## mirem quines mostres estan implicades
-###utilitzem en aquest cas "targets1" i dataset "dCts"
-BROT_NO<-which(targets1$Group == "BROT.NO")
-
-## calculem la mitjana dels controls (BROT.NO en aquest cas) per cada gen controlan pels NA
-#dCts.wo[ , which(targets2$Group == "BROT.NO")]
-mean.BROT.NO <- apply(dCts[ , which(targets1$Group == "BROT.NO")], 1, mean, na.rm=TRUE)
-#mean.BROT.NO
-
-#després, calculem les ddCts de les mostres BROT.SI restant la mitjana de cada gen control obtinguda just abans
-## mirem quines mostres estan implicades
-BROT_SI<-which(targets1$Group == "BROT.SI")
-
-## calculem el doble delta Ct de cada gen en la comparacio BROT.SI - BROT.NO controlant pels NA (=40)
-BROT_SI2<-dCts[ , which(targets1$Group == "BROT.SI")]
-ddCts.BROT.SIvsNO <- ifelse(is.na(dCts[ , which(targets1$Group == "BROT.SI")]),40,dCts[ , which(targets1$Group == "BROT.SI")]) - mean.BROT.NO
-@
-   
-<<graficsddCt3,fig.width=7,fig.height=7>>=
-#i procedim a fer els gràfics corresponents pels ddCts
-boxplot(t(ddCts.BROT.SIvsNO), las = 2, col = gene.col, main = "ddCt values by gene in BROT.SI - BROT.NO",cex.axis=0.4,cex.main=0.9)
-abline(h = 0, lty = 2)
-
-mean.ddCts.BROT.SIvsNO <- apply(ddCts.BROT.SIvsNO, 1, mean)
-#sd.ddCts.wo.POSTvsBROT.NO <- apply(ddCts.wo.POSTvsBROT.NO, 1, sd)
-#plot(1:length(row.names(ddCts.wo.POSTvsBROT.NO)), mean.ddCts.wo.POSTvsBROT.NO, xaxt='n', 
-#     pch=15, col = gene.col, main = "Mean ddCt values by gene in POSTBROT.NO - BROT.NO", 
-#     ylab = "Mean ddCt (+/-SD)", xlab="", ylim = c(-5,7))
-#axis(1, at = 1:length(row.names(ddCts.wo.POSTvsBROT.NO)), labels = row.names(ddCts.wo.POSTvsBROT.NO), las = 2,cex.axis=0.4)
-#arrows(1:length(row.names(ddCts.wo.POSTvsBROT.NO)), mean.ddCts.wo.POSTvsBROT.NO-sd.ddCts.wo.POSTvsBROT.NO, 
-#       1:length(row.names(ddCts.wo.POSTvsBROT.NO)), mean.ddCts.wo.POSTvsBROT.NO+sd.ddCts.wo.POSTvsBROT.NO, 
-#       length=0.05, angle=90, code=3)
-#abline(h = 0, lty = 2)
-@
-
- 
-<<test3>>=
-#Fem els test per veure si els dCts dels grups de la comparació són o no diferents (que equival a veure si els ddCts son o no 0, ja que A==B es pot veure com A-B==0). I aprofitem el loop per registrar els resultats de mean(ddCt), FoldChange (=RQ, =2^-ddCt), i p-valor de cada gen per a aquesta comparació.
-
-## definim els RQs i muntem la taula de resultats (top table)
-RQs3 <- 2^-mean.ddCts.BROT.SIvsNO
-genes<-rownames(dCts)
-topTab3 <- data.frame(gene=genes, ddCt=mean.ddCts.BROT.SIvsNO, RQ=RQs3, pVal=rep(NA,length(genes)))
-#topTab2
-
-## i fem el loop del test de wilcoxon per comparacio de mitjanes per obtenir els p-valors
-for (i in 1:nrow(dCts)){
-  res <- t.test(dCts[i , which(targets1$Group == "BROT.SI")], 
-              dCts[i , which(targets1$Group == "BROT.NO")],
-              paired = FALSE)
-  topTab3[i,"pVal"] <- res$p.value
-}
-sortTab3 <- topTab3[with(topTab3, order(pVal)), ]
-#show(sortTab3)
-
-## i exportem la taula a fitxer csv
-write.table(sortTab3, file = "topTab_comp3_BROT.SIvsBROT.NO.csv", 
-            sep = "\t", dec = ".", row.names = FALSE, col.names = TRUE, quote = FALSE)
-@
-
-La tabla de los miRNA ordenados según valor creciente de pvalor es la siguiente:
-\newpage
-<<showTop3,results='asis'>>=
-xtable(sortTab3[1:25,],digits=5)
-@
- 
- En esta comparación los miRNA \texttt{hsa-miR-10a-5p}, \texttt{hsa-miR-151a-5p}, \texttt{hsa-miR-204-5p} y \texttt{hsa-let-7i-5p} se pueden considerar diferencialmente expresados asumiendo un pvalor inferior a 0.05.\\
-A continuación se muestra la gráfica conocida como RQ o de "fold change" de las muestras BROT.SI relativas a BROT.NO.
- 
- 
-<<graficRQ3,fig.width=7,fig.height=7>>=
-#Per acabar, grafiquem els RQ
-plot(1:length(names(RQs3)), RQs3, xaxt='n', log = "y", ylim = c(0.1, 10), 
-     pch=15, col = gene.col, main = "RQ by gene in BROT.SIvsBROT.NO", 
-     ylab = "RQ", xlab="")
-abline(h = 1, lty = 2)
-axis(1, at = 1:length(row.names(ddCts.BROT.SIvsNO)), labels = row.names(ddCts.BROT.SIvsNO), las = 2,cex.axis=0.4)
-arrows(1:length(names(RQs3)), RQs3, 
-       1:length(names(RQs3)), 1, 
-       length=0, lwd = 4, col = gene.col, angle=90, code=3)
-pos.x <- which(topTab3$pVal<0.05 & topTab3$ddCt<0) # els de ddCt negatiu seran els de FC positiu
-neg.x <- which(topTab3$pVal<0.05 & topTab3$ddCt>0) # els de ddCt negatiu seran els de FC negatiu
-pos.y <- RQs3[pos.x]+0.5
-neg.y <- RQs3[neg.x]-0.5
-##per colocar el "*" en cada barra que 
-#if (length(pos.x)>0) {text(pos.x, y = pos.y, "*")}
-if (length(pos.x)>0) {text(pos.x, y = 0.95, "*")}
-#if (length(neg.x)>0) {text(neg.x, y = neg.y, "*")}
-if (length(neg.x)>0) {text(neg.x, y = 1.05, "*")}
-@
- 
-\newpage
-\subsubsection{Comparación 4: PostBrote Remisión vs PostBrote NoRemisión}
-    Se comparan las muestras del grupo ``PostBrote Remisión'' con las del grupo ``PostBrote NORemisión''. Se ha utilizado el test estadístico t-student para muestras no apareadas. El gráfico de cajas para los ddCt de cada uno de los miRNA es el siguiente:  
-<<comparacion4>>=
-#Primer doncs, calculem les mitjanes per gen del grup control (POSTBROT.NO en aquest cas)
-## mirem quines mostres estan implicades
-###utilitzem en aquest cas "targets1" i dataset "dCts"
-POSTBROT_NO<-which(targets1$Group == "POSTBROT.NO")
-
-## calculem la mitjana dels controls (POSTBROT.NO en aquest cas) per cada gen controlan pels NA
-mean.POSTBROT.NO <- apply(dCts[ , which(targets1$Group == "POSTBROT.NO")], 1, mean, na.rm=TRUE)
-#mean.POSTBROT.NO
-
-#després, calculem les ddCts de les mostres BROT.SI restant la mitjana de cada gen control obtinguda just abans
-## mirem quines mostres estan implicades
-POSTBROT_SI<-which(targets1$Group == "POSTBROT.SI")
-
-## calculem el doble delta Ct de cada gen en la comparacio BROT.SI - BROT.NO controlant pels NA (=40)
-POSTBROT_SI2<-dCts[ , which(targets1$Group == "POSTBROT.SI")]
-ddCts.POSTBROT.SIvsNO <- ifelse(is.na(dCts[ , which(targets1$Group == "POSTBROT.SI")]),40,dCts[ , which(targets1$Group == "POSTBROT.SI")]) - mean.POSTBROT.NO
-@
-   
-<<graficsddCt4>>=
-#i procedim a fer els gràfics corresponents pels ddCts
-boxplot(t(ddCts.POSTBROT.SIvsNO), las = 2, col = gene.col, main = "ddCt values by gene in POSTBROT.SI - POSTBROT.NO",cex.axis=0.4,cex.main=0.9)
-abline(h = 0, lty = 2)
-
-mean.ddCts.POSTBROT.SIvsNO <- apply(ddCts.POSTBROT.SIvsNO, 1, mean)
-#sd.ddCts.wo.POSTvsBROT.NO <- apply(ddCts.wo.POSTvsBROT.NO, 1, sd)
-#plot(1:length(row.names(ddCts.wo.POSTvsBROT.NO)), mean.ddCts.wo.POSTvsBROT.NO, xaxt='n', 
-#     pch=15, col = gene.col, main = "Mean ddCt values by gene in POSTBROT.NO - BROT.NO", 
-#     ylab = "Mean ddCt (+/-SD)", xlab="", ylim = c(-5,7))
-#axis(1, at = 1:length(row.names(ddCts.wo.POSTvsBROT.NO)), labels = row.names(ddCts.wo.POSTvsBROT.NO), las = 2,cex.axis=0.4)
-#arrows(1:length(row.names(ddCts.wo.POSTvsBROT.NO)), mean.ddCts.wo.POSTvsBROT.NO-sd.ddCts.wo.POSTvsBROT.NO, 
-#       1:length(row.names(ddCts.wo.POSTvsBROT.NO)), mean.ddCts.wo.POSTvsBROT.NO+sd.ddCts.wo.POSTvsBROT.NO, 
-#       length=0.05, angle=90, code=3)
-#abline(h = 0, lty = 2)
-@
-
-    
-<<test4>>=
-#Fem els test per veure si els dCts dels grups de la comparació són o no diferents (que equival a veure si els ddCts son o no 0, ja que A==B es pot veure com A-B==0). I aprofitem el loop per registrar els resultats de mean(ddCt), FoldChange (=RQ, =2^-ddCt), i p-valor de cada gen per a aquesta comparació.
-## definim els RQs i muntem la taula de resultats (top table)
-RQs4 <- 2^-mean.ddCts.POSTBROT.SIvsNO
-genes<-rownames(dCts)
-topTab4 <- data.frame(gene=genes, ddCt=mean.ddCts.POSTBROT.SIvsNO, RQ=RQs4, pVal=rep(NA,length(genes)))
-## i fem el loop del test de wilcoxon per comparacio de mitjanes per obtenir els p-valors
-for (i in 1:nrow(dCts)){
-  res <- t.test(dCts[i , which(targets1$Group == "POSTBROT.SI")], 
-              dCts[i , which(targets1$Group == "POSTBROT.NO")],
-              paired = FALSE)
-  topTab4[i,"pVal"] <- res$p.value
-}
-sortTab4 <- topTab4[with(topTab4, order(pVal)), ]
-#show(sortTab4)
-
-## i exportem la taula a fitxer csv
-write.table(sortTab4, file = "topTab_comp4_POSTBROT.SIvsPOSTBROT.NO.csv", 
-            sep = "\t", dec = ".", row.names = FALSE, col.names = TRUE, quote = FALSE)
-@
-
-La tabla de los miRNA ordenados según valor creciente de pvalor es la siguiente:
-\newpage
-<<showTop4,results='asis'>>=
-xtable(sortTab4[1:25,],digits=5)
-@
- 
- En esta comparación solamente el miRNA \texttt{hsa-miR-365a-3p} se puede considerar diferencialmente expresado asumiendo un pvalor inferior a 0.05.\\
-A continuación se muestra la gráfica conocida como RQ o de "fold change" de las muestras POSTBROT.SI relativas a POSTBROT.NO.   
-
-<<graficRQ4>>=
-#Per acabar, grafiquem els RQ
-plot(1:length(names(RQs4)), RQs4, xaxt='n', log = "y", ylim = c(0.1, 10), 
-     pch=15, col = gene.col, main = "RQ by gene in POSTBROT.SIvsPOSTBROT.NO", 
-     ylab = "RQ", xlab="")
-abline(h = 1, lty = 2)
-axis(1, at = 1:length(row.names(ddCts.POSTBROT.SIvsNO)), labels = row.names(ddCts.POSTBROT.SIvsNO), las = 2,cex.axis=0.4)
-arrows(1:length(names(RQs4)), RQs4, 
-       1:length(names(RQs4)), 1, 
-       length=0, lwd = 4, col = gene.col, angle=90, code=3)
-pos.x <- which(topTab4$pVal<0.05 & topTab4$ddCt<0) # els de ddCt negatiu seran els de FC positiu
-neg.x <- which(topTab4$pVal<0.05 & topTab4$ddCt>0) # els de ddCt negatiu seran els de FC negatiu
-pos.y <- RQs4[pos.x]+0.5
-neg.y <- RQs4[neg.x]-0.5
-##per colocar el "*" en cada barra que 
-#if (length(pos.x)>0) {text(pos.x, y = pos.y, "*")}
-if (length(pos.x)>0) {text(pos.x, y = 0.95, "*")}
-#if (length(neg.x)>0) {text(neg.x, y = neg.y, "*")}
-if (length(neg.x)>0) {text(neg.x, y = 1.05, "*")}
-@
- 
 \newpage
 %-------------------------------------------------------------------------------------------------------------------------------------------
+\section{Análisis y Resultados}
+%-------------------------------------------------------------------------------------------------------------------------------------------
+En esta sección se realizarán los diagramas de Venn de las comparaciones en que está interesada la investigadora y posteriormente los Heatmaps. Para los \texttt{diagramas de Venn}, se proporcionará una figura donde se verán gráficamente los miRNAs comunes y no comunes entre las diferentes comparaciones, y un archivo con extensión .csv que se puede abrir con Excel, para cada diagrama de Venn dónde se podrán identificar los miRNAs en cada caso. En el archivo habrá dos columnas, con ceros y unos, una para cada comparación. Para saber los miRNA comunes en las comparaciones analizadas, se han de buscar que en las celdas del excel, aparezca un ``1'' en las dos columnas.\\
+En el caso de los \texttt{Heatmaps}, se proporcionará una figura del mismo para cada comparación, donde el color azul representará menor expresión del miRNA, mientras que el color rojo, representará mayor expresión. Por temas estéticos los valores de Ct normalizados que se han utilizado para hacer los Heatmaps se han centrado (se ha calculado la media y desviación estandar de todos los valores, y a cada uno de ellos se les ha restado la media y se ha dividido por la desviación estándar).
+
+\subsection{Diagramas de Venn}
+\subsubsection{Comparación (Brote Remisión vs Brote No Remisión) vs (PostBrote NoRemisión vs Brote NoRemisión)}
+Como se puede observar en la siguiente figura (\ref{fig:venn1}), el número de miRNA comunes con un pvalor inferior a 0.05 es de 1, concretamente el miRNA \texttt{hsa-miR-10a-5p}.
+<<VDfunction,echo=FALSE,results='hide'>>=
+vennfrom2csv<-function(file1,name1,file2,name2,pval) {
+  ##seleccionem els cutoffs
+  pass1 <- file1[which(file1$pVal<pval),]
+  #dim(pass1)
+  pass2 <- file2[which(file2$pVal<pval),]
+  #dim(pass2)
+  list1 <- as.character(pass1$gene)
+  #length(list1)
+  list2 <- as.character(pass2$gene)
+  #length(list2)
+
+  list <- c(list1, list2)
+  #length(list)
+  list <- sort(unique(list))
+  #length(list)
+
+  ####es crea un data.frame que omplim de 0 i després de 1 si hi coexisteixen en les dues llistes
+  df <- data.frame(genes = list, l1 = rep(0,length(list)), l2 = rep(0,length(list)))
+  #head(df)
+
+  df$l1 <- as.numeric((df$genes %in% list1)==T)
+  df$l2 <- as.numeric((df$genes %in% list2)==T)
+
+  ##Fem el diagrama de venn
+  overlap<-calculate.overlap(x=list("list1"=list1,"list2"=list2))
+
+  draw.pairwise.venn(length(overlap$a1),length(overlap$a2),length(overlap$a3),
+                  category=c(name1,name2),scaled = TRUE,euler.d = TRUE, 
+                 fill = c("blue", "red"),lty = "blank",cat.pos = c(190, 190))
+  
+  ##es grava l'arxiu de text on s'indica quin gen hi és a cada venn
+  colnames(df)<-c("miRNA",name1,name2)
+  write.csv(df, file=file.path(resultsDir,paste("mult.comp.",name1,"_",name2,".csv",sep="")))
+}
+@
+
+
+<<venn1, echo=FALSE,results='hide',message=FALSE>>=
+#Brote Remisión vs Brote No Remisión) vs (PostBrote NoRemisión vs Brote NoRemisión)
+file1 <- top3
+name1 <-"Brote.SI vs Brote.No"
+file2<- top1
+name2<-"PostBrote.No vs Brote.No"
+
+pdf(file.path(resultsDir,"VennDiagram1.pdf"))
+grid.arrange(gTree(children=vennfrom2csv(file1,name1,file2,name2,0.05)),top=paste("Venn Diagram for: ",name1, " vs ",name2," (pval<0.05)",sep=""))
+dev.off()  
+@
+\begin{figure}
+\centering
+\includegraphics[scale=0.4]{/home/rgonzalo/Documents/Estudis/2017-01-CristinaSole-VHIR-qPCR-B4040/results/VennDiagram1.pdf}
+\caption{\label{fig:venn1}Diagrama de Venn para las comparaciones Brote.SI vs Brote.No vs PostBrote.No vs Brote.No con pvalor$<$0.05}
+\end{figure}
+
+\subsubsection{Comparación (Brote Remisión vs Brote No Remisión) vs (PostBrote Remisión vs Brote Remisión)}
+Como se puede observar en la siguiente figura (\ref{fig:venn2}), no existe ningún miRNA común entre estas dos comparaciones.
+<<venn2, echo=FALSE,results='hide',message=FALSE>>=
+file1 <- top3
+name1 <-"Brote.SI vs Brote.No"
+file2 <- top2
+name2<-"PostBrote.Si vs Brote.Si"
+
+pdf(file.path(resultsDir,"VennDiagram2.pdf"))
+grid.arrange(gTree(children=vennfrom2csv(file1,name1,file2,name2,0.05)),top=paste("Venn Diagram for: ",name1, " vs ",name2," (pval<0.05)",sep=""))
+dev.off()  
+@
+\begin{figure}
+\centering
+\includegraphics[scale=0.4]{/home/rgonzalo/Documents/Estudis/2017-01-CristinaSole-VHIR-qPCR-B4040/results/VennDiagram2.pdf}
+\caption{\label{fig:venn2}Diagrama de Venn para las comparaciones Brote.SI vs Brote.No vs PostBrote.Si vs Brote.Si con pvalor$<$0.05}
+\end{figure}
+
+\subsubsection{Comparación (Brote Remisión vs Brote No Remisión) vs (PostBrote Remisión vs PostBrote No Remisión)}
+Como se puede observar en la siguiente figura (\ref{fig:venn3}), no existe ningún miRNA común entre estas dos comparaciones.
+<<venn3, echo=FALSE,results='hide',message=FALSE>>=
+file1 <- top3
+name1 <-"Brote.SI vs Brote.No"
+file2 <- top4
+name2<-"PostBrote.Si vs PostBrote.No"
+
+pdf(file.path(resultsDir,"VennDiagram3.pdf"))
+grid.arrange(gTree(children=vennfrom2csv(file1,name1,file2,name2,0.05)),top=paste("Venn Diagram for: ",name1, " vs ",name2," (pval<0.05)",sep=""))
+dev.off()  
+@
+\begin{figure}
+\centering
+\includegraphics[scale=0.4]{/home/rgonzalo/Documents/Estudis/2017-01-CristinaSole-VHIR-qPCR-B4040/results/VennDiagram3.pdf}
+\caption{\label{fig:venn3}Diagrama de Venn para las comparaciones Brote.SI vs Brote.No vs PostBrote.Si vs PostBrote.No con pvalor$<$0.05}
+\end{figure}
+
+\subsubsection{Comparación (PostBrote No Remisión vs Brote No Remisión) vs (PostBrote Remisión vs Brote Remisión)}
+Como se puede observar en la siguiente figura (\ref{fig:venn4}), solamente hay un miRNA común entre estas dos comparaciones (\texttt{hsa-miR-195-5p})
+<<venn4, echo=FALSE,message=FALSE,results='hide'>>=
+file1 <- top1
+name1 <-"PostBrote.No vs Brote.No"
+file2 <- top2
+name2<-"PostBrote.Si vs Brote.Si"
+
+pdf(file.path(resultsDir,"VennDiagram4.pdf"))
+grid.arrange(gTree(children=vennfrom2csv(file1,name1,file2,name2,0.05)),top=paste("Venn Diagram for: ",name1, " vs ",name2," (pval<0.05)",sep=""))
+dev.off()  
+@
+ \begin{figure}
+ \centering
+ \includegraphics[scale=0.4]{/home/rgonzalo/Documents/Estudis/2017-01-CristinaSole-VHIR-qPCR-B4040/results/VennDiagram4.pdf}
+ \caption{\label{fig:venn4}Diagrama de Venn para las comparaciones PostBrote.No vs Brote.No vs PostBrote.Si vs Brote.Si con pvalor$<$0.05}
+ \end{figure}
+
+%------------------------------------------------------------------------------------------
+\newpage
+\subsection{Heatmaps}
+\subsubsection{Comparación Brote No Remisión vs PostBrote No Remisión}
+<<preparadadesheatmap1,fig.align='center',fig.height=5,fig.width=5>>=
+#ens quedem amb les columnes que interesen i les ordenem
+hm1Data<-normData2[,1:13]
+hm1Data<-hm1Data[,c(1,2,4,6,8,10,12,3,5,7,9,11,13)]
+#guardem els noms dels gens
+rnames <- hm1Data[,1]
+#Ho transforment en una matrix
+mat.hm1Data<-data.matrix(hm1Data[,-1])
+
+rownames(mat.hm1Data) <- rnames
+my_palette <- colorRampPalette(c("red", "white", "blue"))(n = 299)
+par(cex.main=0.7)
+
+heatmap.2(mat.hm1Data,
+  main = "Brote No Remisión vs PostBrote No Remisión",
+  key = FALSE,
+  scale="column",
+  na.rm = TRUE,
+  cexRow = 0.4 ,
+  cexCol = 0.5 ,
+  notecol="black",      # change font color of cell labels to black
+  density.info="none",  # turns off density plot inside color legend
+  trace="none",         # turns off trace lines inside the heat map
+  margins =c(12,9),     # widens margins around plot
+  col=my_palette,       # use on color palette defined earlier
+  dendrogram="row",     # only draw a row dendrogram
+  Colv="NA",
+  ColSideColors = c(rep("darkgreen",6 ),rep("lightgreen",6)))  
+@
+
+<<hm2pdf1,message=FALSE,results='hide'>>=
+pdf(file.path(resultsDir,"Heatmap1.pdf"))
+par(cex.main=0.7)
+heatmap.2(mat.hm1Data,
+  main = "Brote No Remisión vs PostBrote No Remisión",
+  key = FALSE,
+  scale="column",
+  na.rm = TRUE,
+  cexRow = 0.4 ,
+  cexCol = 0.5 ,
+  notecol="black",      # change font color of cell labels to black
+  density.info="none",  # turns off density plot inside color legend
+  trace="none",         # turns off trace lines inside the heat map
+  margins =c(12,9),     # widens margins around plot
+  col=my_palette,       # use on color palette defined earlier
+  dendrogram="row",     # only draw a row dendrogram
+  Colv="NA",
+  ColSideColors = c(rep("darkgreen",6 ),rep("lightgreen",6)))
+dev.off()
+@
+
+
+\subsubsection{Comparación Brote Remisión vs PostBrote Remisión}
+<<preparadadesheatmap2,fig.align='center',fig.height=5,fig.width=5>>=
+#ens quedem amb les columnes que interesen i les ordenem
+hm2Data<-normData2[,c(1,14:27)]
+hm2Data<-hm2Data[,c(1,2,4,6,8,10,12,14,3,5,7,9,11,13,15)]
+#guardem els noms dels gens
+rnames <- hm2Data[,1]
+#Ho transforment en una matrix
+mat.hm2Data<-data.matrix(hm2Data[,-1])
+rownames(mat.hm2Data) <- rnames
+par(cex.main=0.7)
+
+heatmap.2(mat.hm2Data,
+  main = "Brote Remisión vs PostBrote Remisión", 
+  key = FALSE,
+  scale="column",
+  na.rm = TRUE,
+  cexRow = 0.4 ,
+  cexCol = 0.5 ,
+  notecol="black", 
+  density.info="none",  # turns off density plot inside color legend
+  trace="none",         # turns off trace lines inside the heat map
+  margins =c(12,9),     # widens margins around plot
+  col=my_palette,       # use on color palette defined earlier
+  dendrogram="row",     # only draw a row dendrogram
+  Colv="NA",
+  ColSideColors = c(rep("darkgreen",7 ),rep("lightgreen",7)))   
+@
+
+<<hm2pdf2,message=FALSE,results='hide'>>=
+pdf(file.path(resultsDir,"Heatmap2.pdf"))
+par(cex.main=0.7)
+heatmap.2(mat.hm2Data,
+  main = "Brote Remisión vs PostBrote Remisión", 
+  scale="column",
+  na.rm = TRUE,
+  key = FALSE,
+  cexRow = 0.4 ,
+  cexCol = 0.5 ,
+  notecol="black", 
+  trace="none",         # turns off trace lines inside the heat map
+  margins =c(12,9),     # widens margins around plot
+  col=my_palette,       # use on color palette defined earlier
+  dendrogram="row",     # only draw a row dendrogram
+  Colv="NA",
+  ColSideColors = c(rep("darkgreen",7 ),rep("lightgreen",7)))
+dev.off()
+@
+
+
+\subsubsection{Comparación Brote Remisión vs Brote No Remisión}
+<<preparadadesheatmap3,fig.align='center',fig.height=5,fig.width=5>>=
+#ens quedem amb les columnes que interesen 
+hm3Data<-normData1[,c(1,2,4,5,7,9,11,13,15,17,19,21,23,25,27)]
+#guardem els noms dels gens
+rnames <- hm3Data[,1]
+#Ho transforment en una matrix
+mat.hm3Data<-data.matrix(hm3Data[,-1])
+
+rownames(mat.hm3Data) <- rnames
+par(cex.main=0.7)
+
+heatmap.2(mat.hm3Data,
+  main = "Brote Remisión vs Brote No Remisión", 
+  notecol="black", 
+  scale="column",
+  na.rm = TRUE,
+  key = FALSE,
+  cexRow = 0.4 ,
+  cexCol = 0.5 ,
+  density.info="none",  # turns off density plot inside color legend
+  trace="none",         # turns off trace lines inside the heat map
+  margins =c(12,9),     # widens margins around plot
+  col=my_palette,       # use on color palette defined earlier
+  dendrogram="row",     # only draw a row dendrogram
+  Colv="NA",
+  ColSideColors = c(rep("darkgreen",7 ),rep("lightgreen",7)))   
+@
+
+<<hm2pdf3,message=FALSE,results='hide'>>=
+pdf(file.path(resultsDir,"Heatmap3.pdf"))
+par(cex.main=0.7)
+heatmap.2(mat.hm3Data,
+  main = "Brote Remisión vs Brote No Remisión", 
+  notecol="black", 
+  scale="column",
+  na.rm = TRUE,
+  key = FALSE,
+  cexRow = 0.4 ,
+  cexCol = 0.5 ,
+  trace="none",         # turns off trace lines inside the heat map
+  margins =c(12,9),     # widens margins around plot
+  col=my_palette,       # use on color palette defined earlier
+  dendrogram="row",     # only draw a row dendrogram
+  Colv="NA",
+  ColSideColors = c(rep("darkgreen",7 ),rep("lightgreen",7)))
+dev.off()
+@
+
+\subsubsection{Comparación PostBrote Remisión vs PostBrote No Remisión}
+<<preparadadesheatmap4,fig.align='center',fig.height=5,fig.width=5>>=
+#ens quedem amb les columnes que interesen 
+hm4Data<-normData1[,c(1,3,6,8,10,12,14,16,18,20,22,24,26,28)]
+#guardem els noms dels gens
+rnames <- hm4Data[,1]
+#Ho transforment en una matrix i ho scalem perque el heatmap surti més bonic
+mat.hm4Data<-data.matrix(hm4Data[,-1])
+
+rownames(mat.hm4Data) <- rnames
+par(cex.main=0.7)
+
+heatmap.2(mat.hm4Data,
+  main = "PostBrote Remisión vs PostBrote No Remisión", 
+  notecol="black", 
+  key = FALSE,
+  scale="column",
+  na.rm = TRUE,
+  cexRow = 0.4 ,
+  cexCol = 0.5 ,
+  trace="none",         # turns off trace lines inside the heat map
+  margins =c(12,9),     # widens margins around plot
+  col=my_palette,       # use on color palette defined earlier
+  dendrogram="row",     # only draw a row dendrogram
+  Colv="NA",
+  ColSideColors = c(rep("darkgreen",6 ),rep("lightgreen",7)))   
+@
+
+<<hm2pdf4,message=FALSE,results='hide'>>=
+pdf(file.path(resultsDir,"Heatmap4.pdf"))
+par(cex.main=0.7)
+heatmap.2(mat.hm4Data,
+  main = "PostBrote Remisión vs PostBrote No Remisión", 
+  notecol="black", 
+  key = FALSE,
+  scale="column",
+  na.rm = TRUE,
+  cexRow = 0.4 ,
+  cexCol = 0.5 ,
+  trace="none",         # turns off trace lines inside the heat map
+  margins =c(12,9),     # widens margins around plot
+  col=my_palette,       # use on color palette defined earlier
+  dendrogram="row",     # only draw a row dendrogram
+  Colv="NA",
+  ColSideColors = c(rep("darkgreen",6 ),rep("lightgreen",7)))
+dev.off()
+@
+
+
+%-------------------------------------------------------------------------------------------------------------------------------------------
 \section{Conclusiones}
-%-----------------------------------------------------------------------------------------------------------------
-En este estudio se han analizado 28 placas de 96 pocillos de la tecnología qPCR de la casa comercial Exiqon. En el control de calidad realizado se ha visto que una de las muestras (\texttt{NL022}) no tenía la suficiente calidad para seguir en el estudio. Esto ha hecho que en las comparaciones apareadas, se haya tenido que eliminar la muestra del mismo paciente (\texttt{NL021}).
-Se han realizado cuatro comparaciones con las muestras que han generado el siguiente número de miRNA diferencialmente expresados (DE):
+%----------------------------------------------------------------------------
+En el presente estudio se han realizado varios Diagramas de Venn para valorar el número de genes comunes que existían entre diferentes listas de miRNA diferencialmente expresados, procedentes de un análisis anterior (ver estudio 2016-CristinaSole-VHIR-B2326). Sólamente se ha encontrado un miRNA en común en dos de las comparaciones propuestas:
 \begin{itemize}
-  \item Comparaciones con muestras apareadas:
-    \begin{enumerate}
-      \item PostBrote NoRemisión vs  Brote NoRemisión = \textbf{9 miRNA DE}
-      \item PostBrote Remisión vs Brote Remisión = \textbf{12 miRNA DE}
-    \end{enumerate}
-  \item Comparaciones con muestras no apareadas:
-    \begin{enumerate}
-      \item Brote Remisión vs Brote NoRemisión = \textbf{4 miRNA DE}
-      \item PostBrote Remisión vs PostBrote NoRemisión = \textbf{1 miRNA DE}
-    \end{enumerate} 
+  \item (Brote Remisión vs Brote No Remisión) vs (PostBrote No-
+Remisión vs Brote NoRemisión): \textbf{miRNA \texttt{hsa-miR-10a-5p}}
+  \item (PostBrote No Remisión vs Brote No Remisión) vs (Post-
+Brote Remisión vs Brote Remisión): \textbf{miRNA \texttt{hsa-miR-195-5p}}
 \end{itemize}
+\\
+También se han realizado varios heatmaps de las comparaciones incluídas en el estudio anterior. En lineas generales no se observan grupos de miRNAs con expresión característica y diferencial entre las condiciones analizadas.
 %-----------------------------------------------------------------------------------------------------------------
 
 \section{Otras consideraciones}
 
-En el momento de analizar los resultados obtenidos, se ha de tener en cuenta que en las diferentes pruebas estadísticas realizadas no se ha corregido el pvalor resultante por el número de test realizado, lo que pudiera provocar la aparición de algún falso positivo.\\
+En el momento de analizar los resultados obtenidos, se ha de tener en cuenta que en el estudio anterior del cual provienen los datos,  no se corrigió el pvalor resultante por el número de test realizado, lo que pudiera provocar la aparición de algún falso positivo.\\
+
+Todos los análisis han sido realizados con el programa estadístico ``R''( \textttt{\Sexpr{R.Version()$versi}, Copyright (C) 2015 The R Foundation for Statistical Computing} ).\\
 
 \newline
 \textbf{Para poder evaluar la utilidad del resultado de nuestro trabajo os rogamos que nos informéis de los productos científicos como consecuencia de los mismos (comunicaciones, artículos, tesis, etc.) Así mismo nos gustaría que incluyerais el siguiente párrafo en el apartado de agradecicimentos de tus manuscritos.}\\
