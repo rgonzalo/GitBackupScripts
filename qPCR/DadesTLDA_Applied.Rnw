@@ -1,0 +1,1006 @@
+\documentclass{article}
+\usepackage{underscore}
+\usepackage[utf8]{inputenc}
+\usepackage{longtable}
+\usepackage[margin=1in]{geometry}
+\usepackage[spanish]{babel}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage[table,xcdraw]{xcolor}
+\usepackage{fancyvrb}
+\usepackage{lscape}
+\usepackage{anysize}
+\usepackage{fancyhdr}%encabezados y pies de página
+\usepackage{color}
+\definecolor{thistle}{rgb}{0.85, 0.75, 0.85}
+
+\lfoot[a1] {\tiny\textcolor{violet}{VHIR-UEB-FOR-004v.01}}
+
+\lhead{\includegraphics[width=.28\textwidth]{./images/UEBblanc.jpg}}
+\rhead{\leftmark}
+
+\pagestyle{fancy}
+
+
+\marginsize{3.0cm}{3.5cm}{2.5cm}{2.5cm}
+\renewcommand{\baselinestretch}{1.3} % per canviar interlineado
+\renewcommand*\footnoterule{}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=violet
+}
+
+
+\begin{document}
+\title{\begin{figure}[htbp]
+       \centering
+       \includegraphics[width=60mm]{images/UEBblanc.jpg}
+       \includegraphics[width=35mm]{images/IR.jpg}
+       \end{figure}
+       \vspace{1cm}
+       Estudio de la expressión diferencial de miRNAs 
+       entre una linea celular con preferencia a provocar metástasis\\
+       en hueso y una línea control\\
+       \footnotetext{\footnoterule{\tiny\textcolor{violet}{VHIR-UEB-FOR-013v.01}}}\\
+       {\normalsize Mireia Olivan - B4108 }\\
+       }
+
+
+\author{Ricardo Gonzalo, Ferran Brians\'{o} y Alex S\'{a}nchez \\ 
+        Unitat d'Estad\'{i}stica i Bioinform\`{a}tica \\
+        Vall d'Hebron Institut de Recerca (VHIR) \\
+        }
+
+\bibliographystyle{plain}
+
+
+        
+\maketitle
+
+\newpage
+
+\tableofcontents
+\newpage
+%--------------------------------------------------------------------------------------------------------------------------------------------
+\section{Introducción}
+%------------------------------------------------------------------------------------------------------------------------------------------
+Este estudio pretende reanalizar unas muestras donde se ha analizado la expressión de miRNA utilizando la tecnología de qPCR en placas de la casa comercial Applied Biosystems, entre una línea celular que tiene preferencia para provocar metástasis en hueso y una línea celular control.
+La investigadora también está interesada en ver las diferencias que existen entre dos sondas para miRNA normalizadores incluídas en las placas comerciales. Estos miRNA son el \texttt{RNU48-001006 (48)} y el \texttt{U6 snRNA001973 (U6)}
+%-----------------------
+\subsection{Objetivos}
+%-----------------------
+La investigadora está interesada en las siguientes comparaciones:
+
+\begin{itemize}
+  \item Metastásico vs Control (normalizado con RNU48) = MSU48 - WTU48 
+  \item Metastásico vs Control (normalizado con U6) = MSU6 - WTU6
+\end{itemize}
+
+%-----------------------
+\subsection{Los datos para el análisis}
+%-----------------------
+Los datos para el análisis han sido proporcionados por la investigadora en formato ``.xls''. Para analizar cada muestra se han procesado dos placas: la placa A y la placa B. La investigadora ha entregado 2 archivos resultantes de exportar los valores de Ct de cada tipo de placa (un archivo para todas las placas tipo A y un archivo para todas las placas tipo B) utilizando el software de la misma casa comercial \texit{Expression Suite}. Al utilizar este software se ha calculado un nivel de umbral específico para cada miRNA. Ambos archivos se han modificado de manera que los \texttt{amplification score} y los \texttt{Ct} de cada muestra estén en las columnas uno a continuación del otro. En las filas se mantiene el nombre de cada miRNA testado. Se trabajarán los datos en dos archivos por separado hasta que se hayan normalizado, ya que se ha observado que los valores de los dos normalizadores propuestos son bastante diferentes en cada placa.
+
+Todos los análisis han sido realizados con el programa estadístico ``R''( \textttt{\Sexpr{R.Version()$versi}, Copyright (C) 2016 The R Foundation for Statistical Computing}, URL https://www.R-project.org/) [2].\\
+
+%-------------------------------------------------------------------------------------------------------------------------------------------
+\section{Análisis}
+%-------------------------------------------------------------------------------------------------------------------------------------------
+En esta sección se proporcionan los resultados que se han obtenido al analizar las muestras proporcionadas. Primero de todo se ha realizado un control de calidad exhaustivo para determinar si hay alguna muestra susceptible de ser eliminada del estudio con el objetivo de mejorar la calidad final del mismo. En el mismo proceso se decidirá el mejor candidato para utilizarlo como gen normalizador.\\
+Posteriormente se procederá al cálculo de la cuantificación relativa (RQ = $2^{-\Delta\Delta C_t$}), según el método de Livak  [1], que se puede resumir de la siguiente manera:
+
+\begin{enumerate}
+  \item $\Delta Ct = Ct_{geninteres} - Ct_{endo}$
+  \item $\Delta \Delta Ct = \Delta Ct_{muestra1} - \Delta Ct_{calibrador}$ 
+  \item RQ = Relative quantification $= 2^{-\Delta \Delta C_t}$
+\end{enumerate}
+
+El valor de RQ es la tasa de cambio (o "fold change") de la muestra problema, comparada con la muestra calibradora (muestra no tratada, muestra de referencia,...). La muestra calibradora tiene un valor de RQ de 1, por lo que por ejemplo, un valor de RQ de 10 significa que el gen está 10 veces más expresado en la muestra problema que en la muestra calibradora y un RQ de 0.1, significa que el gen está 10 veces menos expresado).\\
+
+Una vez calculadas las expresiones relativas, se procederá a realizar un test estadístico (t de student en este caso) para determinar si hay diferencias entre los dos grupos de muestras que se comparan. Finalmente se representará gráficamente la expresión relativa, marcando aquellos miRNA que en el test hayan dado significativos.
+
+\subsection{Lectura de los datos:}
+Se procede a leer todos los archivos resultantes del procesamiento de cada placa. Como se ha comentado previamente en las columnas se ponen los valores de Ct de las muestras y en las filas los miRNAs analizados. El control \texttt{U6 snRNA001973} aparece cuatro veces al final de cada placa. Se ha calculado la media de los valores de \texttt{amplification score} y \texttt{Ct} y se ha dejado como una sola entrada. A continuación se muestran las cinco filas del inicio y las cinco finales de los dos archivos utilizados (\textit{plateAdata.csv} y \textit{plateBdata.csv}). 
+
+<<packages,echo=FALSE,message=FALSE,warning=FALSE>>=
+require(knitr)
+#require(stargazer)
+require(compareGroups)
+library(xtable)
+require(devtools)
+#install_github("miriammota/mmotaF",force=TRUE)
+library(mmotaF)
+@
+
+
+<<echo=FALSE, results="hide",message=FALSE>>=
+# include this code chunk as-is to set options
+opts_chunk$set(comment=NA,prompt = TRUE, tidy = FALSE, fig.width = 5, fig.height = 5,echo = FALSE, message = FALSE, warning = FALSE)
+Sys.setlocale("LC_TIME", "C")
+@
+
+
+<<dir>>=
+workingDir <- getwd()
+dataDir <- file.path(workingDir, "dades")
+docsDir<-file.path(workingDir,"docs")
+resultsDir <- file.path(workingDir, "results")
+setwd(workingDir)
+@
+
+<<carregadades,echo=FALSE,results="hide">>=
+#llegim el targets
+targets<-read.csv(file.path(dataDir,"targets.csv"),header = TRUE, sep=";")
+
+# Llegim cada arxiu de moment per separat. Després de normalitzar,ja s'ajuntarà.
+plateA <- read.csv(file=file.path(dataDir, "plateAdata.csv"),
+                     header=TRUE, sep=";", dec=".")
+
+#el control endogen U6... està posat 4 vegades. Es fa la mitja i es deixa només un cop per poder utilitzar els noms com a rownames
+U6.meanA<-colMeans(plateA[which(plateA$Target_Name == "U6 snRNA-001973"),-c(1,10)],na.rm = TRUE)
+
+#creem un dataframe per poder-lo unir al plateA
+U6.meanA<-as.data.frame(t(U6.meanA))
+U6.meanA$Target_Name<-"U6 snRNA-001973"
+U6.meanA$Plate<-"A"
+U6.meanA<-U6.meanA[c("Target_Name","C2_Amp_Score","C2_Ct","C3_Amp_Score","C3_Ct",
+                    "M1_Amp_Score","M1_Ct","M2_Amp_Score","M2_Ct","Plate")]
+plateA<-plateA[-c(381:384),] #eliminem les files antigues de U6
+plateA<-rbind(plateA,U6.meanA)
+
+#fiquem els target_name com rownames
+rownames(plateA)<-plateA$Target_Name
+plateA<-plateA[,-1]
+#dim(plateA) 381 9
+
+##########
+##########
+plateB <- read.csv(file=file.path(dataDir, "plateBdata.csv"),
+                     header=TRUE, sep=";", dec=".")
+#es fa el mateix procediment que hem fet abans per posar els rownames
+U6.meanB<-colMeans(plateB[which(plateB$Target_Name == "U6 snRNA-001973"),-c(1,10)],na.rm = TRUE)
+
+U6.meanB<-as.data.frame(t(U6.meanB))
+U6.meanB$Target_Name<-"U6 snRNA-001973"
+U6.meanB$Plate<-"B"
+U6.meanB<-U6.meanB[c("Target_Name","C2_Amp_Score","C2_Ct","C3_Amp_Score","C3_Ct",
+                    "M1_Amp_Score","M1_Ct","M2_Amp_Score","M2_Ct","Plate")]
+plateB<-plateB[-c(381:384),] #eliminem les files antigues de U6
+plateB<-rbind(plateB,U6.meanB)
+
+#fiquem els target_name com rownames
+rownames(plateB)<-plateB$Target_Name
+plateB<-plateB[,-1]
+#dim(plateB) 381 9
+@
+
+
+<<mostrararhcivoA,results='asis'>>=
+print(xtable(head(plateA)[,-9],caption="Primeras cinco filas de la placa A",label="headA"), tabular.environment = 'longtable', floating = FALSE,size="tiny")
+print(xtable(head(plateB)[,-9],caption="Primeras cinco filas de la placa B",label="headB"), tabular.environment = 'longtable', floating = FALSE,size="tiny")
+@
+
+<<mostrararhcivoB,results='asis'>>=
+print(xtable(tail(plateA)[,-9],caption="Últimas cinco filas de la placa A",label="tailA"), tabular.environment = 'longtable', floating = FALSE,size="tiny")
+print(xtable(tail(plateB)[,-9],caption="Últimas cinco filas de la placa B",label="tailB"), tabular.environment = 'longtable', floating = FALSE,size="tiny")
+@
+
+<<guardadades,echo=FALSE>>=
+## com a R data
+save(plateA, plateB, file=file.path(resultsDir,"rawCts.RData"))
+
+## com a taula csv
+newplateA <- cbind(rownames(plateA), plateA)
+colnames(newplateA)[1] <- "Detector"
+newplateB <- cbind(rownames(plateB), plateB)
+colnames(newplateB)[1] <- "Detector"
+
+write.table(newplateA, file = file.path(resultsDir,"rawCtPlateA.csv"), 
+            quote = FALSE,sep=";", dec=".",row.names = FALSE)
+write.table(newplateB, file = file.path(resultsDir,"rawCtPlateB.csv"), 
+            quote = FALSE,sep=";", dec=".",row.names = FALSE)
+@
+
+
+%-----------------------
+\subsection{Control de Calidad}
+%-----------------------
+Se realizan algunos gráficos de control de calidad que nos permitirán conocer la calidad y la estructura de las muestras. Primero de todo se eliminaran todos aquellos valores de \texttt{Ct} que superen el valor de 35 y aquellos que tengan un valor de \texttt{amplification score} inferior a 1. Se realiza una descripción numérica de los Cts para cada una de las muestras, diagramas de cajas, se contabiliza el número de NAs (miRNA donde el valor de CT es 40 o superior) en las muestras y se mirara si el control \texttt{ath-miR159a-00338} incluido por la casa comercial ha dado salido como se esperaba.
+
+\subsubsection {Eliminación de los valores de \texttt{Ct} superior a 35 o con \texttt{amplification score} inferior a 1}
+A petición de la investigadora, se eliminarán todos aquellos miRNAs que tengan un valor de \texttt{Ct} superior a 35 y un valor de \texttt{amplification score} inferior a 1.
+
+<<eliminarCt,echo=FALSE>>=
+#s'eliminen aquells miRNA amb Ct>35 o amp.score<1 de les mostres 
+plateA<-plateA[-which(plateA$C2_Amp_Score<1 | plateA$C2_Ct>35),] #209 9
+plateB<-plateB[-which(plateB$C2_Amp_Score<1 | plateB$C2_Ct>35),] #129 9
+@
+
+Después de este proceso nos quedan \textbf{209 miRNAs en la placa A} y \textbf{129 miRNAs de la placa B}.
+
+<<preparadades,echo=FALSE>>=
+#eliminem les columnes de amplification score i la de plate
+plateA<-plateA[,-c(1,3,5,7,9)]
+plateB<-plateB[,-c(1,3,5,7,9)]
+
+#Definim les matrius per mostra i per detector
+cts.bySampA <- as.matrix(plateA)
+cts.bySampB <- as.matrix(plateB)
+cts.byGeneA <- t(as.matrix(plateA))
+cts.byGeneB <- t(as.matrix(plateB))
+@
+
+\subsubsection{Análisis de componentes principales de las muestras:}
+Se realiza un análisis de componentes principales para ver como se agrupan las muestras.
+
+<<colors,echo=FALSE,message=FALSE>>=
+## definim parametres pels gràfics
+samp.col <- as.character(targets$Color)
+gene.col <- c(rainbow(dim(cts.byGeneA)[2]+8)) # el +8 es tema estetic
+samp.pch <- targets$PCH
+@
+
+\begin{enumerate}
+\item Placa A
+<<pcafun>>=
+#primer definim la funció
+#vigilar los "ylim". Habría que definirlos en cada caso
+plotPCA <- function ( X, labels=NULL, colors=NULL, var = "",dataDesc="", scale=FALSE, formapunts=NULL, myCex=NULL,...)
+{
+  pcX<-prcomp(t(X))
+  loads<- round(pcX$sdev^2/sum(pcX$sdev^2)*100,1)
+  xlab<-c(paste("PC1",loads[1],"%"))
+  ylab<-c(paste("PC2",loads[2],"%"))
+ if (is.null(colors)) colors=colores
+  plot(pcX$x[,1:2],xlab=xlab,ylab=ylab,
+        xlim=c(min(pcX$x[,1])-5,max(pcX$x[,1])+5),ylim=c(-35,50),pch=formapunts, col=colors)
+        text(pcX$x[,1],pcX$x[,2],labels,pos=3,cex=myCex, col=colors)
+  title(paste(var, dataDesc, sep=" "), cex=0.2)
+}
+@
+
+<<pca,fig.align='center',fig.width=3.5,fig.height=3.5>>=
+plotPCA(X=na.omit(cts.bySampA), labels=targets$ShorName, var="PCA de la",dataDesc = "Placa A", myCex=0.5, colors = samp.col,formapunts=samp.pch)
+legend("topright", c("WT","MS"), col=c("blue","red"), pch=samp.pch,cex=0.5)
+@
+
+El análisis de componentes principales realizado en la placa A separa por la primera componente, con un 73.6\% de la variabilidad total, las muestras controles a un lado y a las muestras problema al otro
+
+\item Placa B
+<<pcaplacaB,fig.align='center',fig.width=3.5,fig.height=3.5>>=
+plotPCA(X=na.omit(cts.bySampB), labels=targets$ShorName, var="PCA de la",dataDesc = "Placa B", myCex=0.6, colors = samp.col,formapunts=samp.pch)
+legend("topright", c("WT","MS"), col=c("blue","red"), pch=samp.pch,cex=0.5)
+@
+
+El análisis de componentes principales en la placa B ha separado las muestras \texttt{M2.MS} y \texttt{C2.WT} por un lado, de las muestras \texttt{C3.WT} y \texttt{M1.MS}. El valor de la primera componente, igual que en la placa A, es muy elevado (54.1\%)
+
+\end{enumerate}
+
+\subsubsection{Resumen numérico de los Cts para cada una de las muestras:}
+En las siguientes dos tablas se muestra la media y desviación estándar de Cts de todos los miRNAs por cada muestra.
+<<renum,results='asis'>>=
+#stargazer(cts.bySamp,title="Resumen numérico de los Cts para cada muestra",summary=TRUE)
+tab<-compareGroups(cts.bySampA)
+tab2<-createTable(tab)
+export2latex(tab2,header = c('all'="Mean (SD)"),file = "taula1.tex")
+
+postTexCG("taula1.tex")
+tab3<-compareGroups(cts.bySampB)
+tab4<-createTable(tab3)
+export2latex(tab4,header = c('all'="Mean (SD)"),file = "taula2.tex")
+postTexCG("taula2.tex")
+@
+\begin{enumerate}
+  \item Placa A
+    \input{taula1.tex}
+  \item Placa B
+    \input{taula2.tex}
+\end{enumerate}
+Como se puede observar en las dos tablas, los valores de Ct en cada placa son muy similares entre todas las muestras.
+
+\subsubsection{Diagrama de cajas de los Cts para cada una de las muestras:}
+\begin{enumerate}
+  \item Placa A
+<<boxplot1,fig.align='center',fig.width=3.5,fig.height=3.5>>=
+## fem grafiques de Ct 
+boxplot(cts.bySampA, las = 2, col = samp.col, main = "Valores de Ct. Placa A",cex.axis=0.5)
+legend("bottom", legend=unique(targets$Group), fill = unique(samp.col),cex=0.4)
+@
+La variabilidad de los valores de Ct es muy similar en todas las muestras. En la muestra \texttt{C2} la variabilidad es algo inferior para los valores altos de Ct.
+
+  \item Placa B
+<<boxplotplabB,fig.align='center',fig.width=3.5,fig.height=3.5>>=
+boxplot(cts.bySampB, las = 2, col = samp.col, main = "Valores de Ct. Placa B",cex.axis=0.5)
+legend("bottom", legend=unique(targets$Group), fill = unique(samp.col),cex=0.4)
+@
+En este caso la dispersión de los datos no es homogénea entre las muestras, y además es importante resaltar que existen bastantes valores de Ct atípicos en todas las muestras.
+\end{enumerate}
+
+\subsubsection{Número de NAs en cada una de las muestras:}
+En esta sección se contabilizarán el número de NAs que hay presentes en cada muestra. Los valores de NA se corresponden a aquellos miRNAs dónde no se ha detectado expresión, o a aquellos miRNAs con valores de Ct superior a 40.
+\begin{enumerate}
+\item Placa A
+<<Nacount,echo=FALSE,message=FALSE,fig.align='center',fig.width=3.5,fig.height=3.5>>=
+na_count<-apply(cts.bySampA,2,function(x) length(which(is.na(x))))
+#na_count<-na_count)
+#na_count
+
+barplot(na_count,las=2,col = samp.col,main="Número de NA's en la placa A",cex.axis = 0.7,cex.names=0.6)
+#legend("topleft", legend = unique(targets$Group), fill = unique(samp.col),cex=0.75)
+@
+
+Se observa en la figura anterior que en la muestra \texttt{C2} no se ha encontrado ningún NA, mientras que en las otras muestras el número oscila entre 8 y 10.
+\item Placa B
+<<Nacount2,echo=FALSE,message=FALSE,fig.align='center',fig.width=3.5,fig.height=3.5>>=
+na_countB<-apply(cts.bySampB,2,function(x) length(which(is.na(x))))
+#na_count<-na_count)
+#na_count
+
+barplot(na_countB,las=2,col = samp.col,main="Número de NA's en la placa B",cex.axis = 0.7,cex.names=0.6)
+#legend("topright", legend = unique(targets$Group), fill = unique(samp.col),cex=0.75)
+@
+De igual manera que pasaba en la placa A, en este placa no se observan NA en la muestra \texttt{C2}, mientras que en las otras muestras el número de NA, oscila entre 6 y 10.
+\end{enumerate}
+
+%NO EJECUTAMOS ESTE CHUNK PORQUE SON MUCHOS GENES (>120) CON UNA GRÁFICA SE VE MEJOR
+%' \subsubsection{Resumen numérico de los Cts para cada uno de los miRNA:}
+%' <<renum2,results='asis',message=FALSE>>=
+%' tabgenA<-compareGroups(cts.byGeneA)
+%' tabgen2<-createTable(tabgen)
+%' export2latex(tabgen2,header = c('all'="Mean (SD)"),file = "taula2.tex")
+%' postTexCG("taula2.tex")
+%' @
+
+%\input{taula2.tex}
+
+\subsubsection{Diagrama de cajas de los Cts para cada uno de los miRNA:}
+En las siguientes gráficas se representa un diagrama de cajas de la expresión de cada uno de los miRNAs en todas las muestras. Estas gráficas servirán para valorar aquellos miRNAs que no varian mucho entre las diferentes muestras, para así poder valorar si son unos buenos candidatos a ser seleccionados como normalizadores. Debido al gran número de miRNAs estudiados, se ha dividido la gráfica en dos para poder visualizar mejor los resultados.
+\begin{enumerate}
+  \item Placa A:
+  <<boxplot5,fig.align='center',fig.width=7>>=
+boxplot(cts.byGeneA[,c(1:105)], las = 2, col = gene.col, main = "Valores de Ct por miRNA. Placa A (I)", cex.axis=0.4)
+boxplot(cts.byGeneA[,c(106:209)], las = 2, col = gene.col, main = "Valores de Ct por miRNA. Placa A  (II)", cex.axis=0.4)
+@
+
+En los gráficos anteriores se observa que los valores de Cts oscilan entre 20 y 35. La mayoría de los miRNAs presenta una variabilidad relativamente baja, aunque hay algunos casos es muy elevada (como por ejemplo \texttt{hsa-miR-449} o \texttt{hsa-miR-200a}).
+
+\item Placa B:
+<<boxplotB,fig.align='center',fig.width=7>>=
+boxplot(cts.byGeneB[,c(1:65)], las = 2, col = gene.col, main = "Valores de Ct por miRNA. Placa B (I)", cex.axis=0.4)
+boxplot(cts.byGeneB[,c(66:129)], las = 2, col = gene.col, main = "Valores de Ct por miRNA. Placa B (II)", cex.axis=0.4)
+@
+En las dos gráficas anteriores se observa que los valores de Ct se sitúan sobretodo entre 30-35. La variabilidad es relativamente baja en la mayoría de miRNAs.
+\end{enumerate}
+
+\subsubsection{Número de NAs en cada uno de los miRNA:}
+En este apartado se contabilizan el número de NAs (valores de Ct superiores a 40) para cada uno de los miRNAs.
+\begin{enumerate}
+\item Placa A:
+<<Nacountgenes,echo=FALSE,message=FALSE,fig.align='center',fig.width=7,fig.height=3.5>>=
+na_count_genesA<-apply(cts.byGeneA,2,function(x) length(which(is.na(x))))
+barplot(na_count_genesA,las=2,col = gene.col,main="Número de NAs por miRNA. Placa A",cex.axis = 0.5,cex.names=0.3)
+#na_count<-na_count
+#na_count
+@
+
+En la gráfica anterior se observa como hay ciertos miRNAs que tienen dos NAs \texttt{hsa-miR-203, hsa-miR-219-1-3p, hsa-miR-485-3p, hsa-miR-548d} y uno tres NAs (\texttt{hsa-miR219-000522}). Teniendo en cuenta que el máximo eran 4 (por el número de muestras), indica que estos miRNAs no se expresan de forma consistente en estas muestras.
+
+\item Placa B:
+<<NacountgenesB,echo=FALSE,message=FALSE,fig.align='center',fig.width=7,fig.height=3.5>>=
+na_count_genesB<-apply(cts.byGeneB,2,function(x) length(which(is.na(x))))
+barplot(na_count_genesB,las=2,col = gene.col,main="Número de NAs por miRNA. Placa B",cex.axis = 0.5,cex.names=0.3)
+#na_count<-na_count
+#na_count
+@
+En la placa B, existen 3 miRNAs que no presentan expresión en tres de las cuatro muestras procesadas (\texttt{hsa-let-7c, hsa-miR-380-5p, hsa-miR-548K}) y otras 4 que tienen dos NAs (\texttt{hsa-miR-1197, hsa-miR-1226, hsa-miR-200a y hsa-miR-604}).
+\end{enumerate}
+
+\subsubsection{Expresión de los genes normalizadores RNU44-001094, RNU48-001006 y U6 snRNA-001973}
+Estos genes son los que la casa comercial propone para que se utilicen como genes normalizadores de las placas. Se va a estudiar su expresión de forma individual mediante un resumen numérico y un diagrama de cajas.
+
+<<renum3,results='asis',message=FALSE>>=
+endo.ctlA<-cts.byGeneA[,c(207:209)]
+endo.ctlB<-cts.byGeneB[,c(127:129)]
+endo.ctl<-rbind(endo.ctlA,endo.ctlB)
+
+tab.endo<-compareGroups(endo.ctl)
+tab.endo2<-createTable(tab.endo)
+export2latex(tab.endo2,header = c('all'="Mean (SD)"),file = "taula3.tex")
+postTexCG("taula3.tex")
+@
+
+\input{taula3.tex}
+
+<<intctl1,fig.align='center',fig.height=4,fig.width=4>>=
+boxplot(endo.ctl,las=2,col="darkviolet",main="Valor de Ct crudos. Genes Normalizadores",ylab="Ct",cex.axis=0.5,cex.main=0.8)
+@
+
+Como se puede observar en la tabla y gráfica anterior, el miRNA que menos varía es el \texttt{RNU48-001006}, después el miRNA \texttt{RNU44-001094}, y por último el miRNA \texttt{U6 snRNA-001973} que es el que más varía, e incluso presenta un valor atípico.
+\\
+\\
+\textbf{\underline{CONCLUSIONES DEL CONTROL DE CALIDAD}}\\
+\\
+Según los diferentes análisis de control de calidad realizados se puede concluir que:
+\begin{itemize}
+  \item Se han eliminado todos aquellos miRNAs que tenían un valor de \texttt{Ct} que superaba 35 y aquellos que tenían un valor de \texttt{amplification score} inferior a 1. 
+  \item En la placa A las muestras se separan perfectamente por la condición de estudio, no así en la placa B, que la separación de las muestras en dos grupos es por un factor que se desconoce.
+  \item La media de valores de Ct y dispersión de los mismos es mayor en la placa B que en la placa A.
+  \item La dispersión de los valores de expresión de los diferentes miRNAs es en general baja, exceptuando algún caso en que se observa una gran variabilidad.
+  \item No se observa expresión del \texttt{ath-miR159a-000338} utilizado como control negativo.
+  \item No se tendŕan en cuenta para el análisis todos aquellos miRNAs que presentan NAs en alguna de las muestras, ya que con un solo valor válido por grupo no se puede realizar una comparación estadística entre ellos. En consecuencia, a partir de ahora se trabajará con \textbf{190 miRNAs} en la placa A y con \textbf{114 miRNAs} en la placa B.
+  \item \textbf{Se decide utilizar el control \texttt{RNU48-001006} como normalizador principal ya que, de los propuestos por la investigadora, se ha visto que es el que menos variabilidad tiene.} También se normalizará de manera alternativa con el control \texttt{U6 snRNA-001973} a petición de la investigadora y con el control \texttt{RNU44-001094} ya que también presenta una baja variabilidad.
+\end{itemize}
+
+<<findNAs>>=
+#2NAs placa A hsa-miR-203, hsa-miR-219-1-3p, hsa-miR-485-3p, hsa-miR-548d
+#naplacaA <- cts.bySampA[which(rownames(cts.bySampA) == "hsa-miR-203-000507" | 
+#                                rownames(cts.bySampA) == "hsa-miR-219-1-3p-002095" |
+#                                rownames(cts.bySampA) == "hsa-miR-485-3p-001277" | 
+#                                rownames(cts.bySampA) == "hsa-miR-548d-001605"),]
+
+#2NAs placa B hsa-miR-1197-002810 hsa-miR-1226-002758 hsa-miR-200a-001011 hsa-miR-604-001567
+#naplacaB <- cts.bySampB[which(rownames(cts.bySampB) == "hsa-miR-1197-002810" | 
+#                                rownames(cts.bySampB) == "hsa-miR-1226-002758" |
+#                                rownames(cts.bySampB) == "hsa-miR-200a-001011" | 
+#                                rownames(cts.bySampB) == "hsa-miR-604-001567"),]
+
+
+#eliminar todos los miRNAs con NAs placa A
+cts.bySampA<-cts.bySampA[complete.cases(cts.bySampA),] #190 4
+
+#elimnar todos NAs en placa B 
+cts.bySampB<-cts.bySampB[complete.cases(cts.bySampB),] #114 4
+@
+
+\subsection{Normalización de los datos}
+Como se ha comentado previamente el miRNA que se ha visto con menor variabilidad es el \texttt{RNU48-001006} que se utilizará como control endógeno. De igual manera también se normalizarán las muestras con el gen \texttt{U6 snRNA-001973} a petición de la investigadora y con el miRNA \texttt{RNU44-001094} que es el segundo que presenta menos variabilidad. 
+En el proceso de normalización, a los valores de Ct de cada miRNA se restará el valor del miRNA seleccionado para obtener los valores de  $\Delta Ct$.
+
+<<norma1>>=
+#hay que juntar las dos placas en una
+cts.bySamp <- rbind(cts.bySampA,cts.bySampB)
+#dim(cts.bySamp)
+
+#NORMALIZACIÓN CON RNU48-001006
+#se calcula en un vector la media de los tres valores del control para cada muestra/placa
+endo.vals1 <- colMeans(cts.bySamp[which(rownames(cts.bySamp) == "RNU48-001006"),])
+## restant els endo.vals1 de cada columna
+dCts1 <- sweep(as.matrix(cts.bySamp), 2, endo.vals1, "-")
+#comprobamos que los valores del control son casi 0
+#show(dCts1)
+#boxplot(t(dCts))
+
+## retirem el gen RNU48-001006 de la matriu de dades
+## també es retiren la resta de controls U6 snRNA-001973 i RNU44-001094
+#dim(dCts) 304 4
+dCts1 <- dCts1[-which(rownames(dCts1)=="RNU48-001006" | rownames(dCts1)=="U6 snRNA-001973" | rownames(dCts1)=="RNU44-001094"),]
+#298 4
+write.csv2(dCts1, file = file.path(resultsDir,"Valores_Ct_Norm_RNU48.csv"), 
+            row.names = TRUE, quote = FALSE)
+
+
+#NORMALIZACIÓN CON U6 snRNA-001973
+#se calcula en un vector la media de los tres valores del control para cada muestra/placa
+endo.vals2 <- colMeans(cts.bySamp[which(rownames(cts.bySamp) == "U6 snRNA-001973"),])
+## restant els endo.vals de cada columna
+dCts2 <- sweep(as.matrix(cts.bySamp), 2, endo.vals2, "-")
+#comprobamos que los valores del control son casi 0
+#show(dCts2)
+#boxplot(t(dCts))
+
+## retirem el gen  U6 snRNA-001973 de la matriu de dades 
+## també es retiren la resta de controls RNU48-001006 i RNU44-001094
+#dim(dCts2) 304 4
+dCts2 <- dCts2[-which(rownames(dCts2)=="RNU48-001006" | rownames(dCts2)=="U6 snRNA-001973" | rownames(dCts2)=="RNU44-001094"),]
+#298 4
+
+write.csv2(dCts2, file = file.path(resultsDir,"Valores_Ct_Norm_U6.csv"), 
+           row.names = TRUE, quote = FALSE)
+
+#NORMALIZACIÓN CON RNU44
+#se calcula en un vector la media de los tres valores del control para cada muestra/placa
+endo.vals3 <- colMeans(cts.bySamp[which(rownames(cts.bySamp) == "RNU44-001094"),])
+## restant els endo.vals de cada columna
+dCts3 <- sweep(as.matrix(cts.bySamp), 2, endo.vals3, "-")
+#comprobamos que los valores del control son casi 0
+#show(dCts3)
+#boxplot(t(dCts3))
+
+## retirem el gen RNU44-001094 de la matriu de dades
+## també es retiren la resta de controls RNU48-001006 i U6 snRNA-001973
+#dim(dCts3) 304 4
+dCts3 <- dCts3[-which(rownames(dCts3)=="RNU48-001006" | rownames(dCts3)=="U6 snRNA-001973" | rownames(dCts3)=="RNU44-001094"),]
+#298 4
+write.csv2(dCts3, file = file.path(resultsDir,"Valores_Ct_Norm_RNU44.csv"),
+           row.names = TRUE, quote = FALSE)
+
+# #NORMALIZACIÓN CON UN VALOR FIJO DE RNU44 ENTRADO POR MI (PRUEBA DE QUE TODO VA BIEN)
+# #Añadimos el valor fijo
+# endo.vals3 <-c(rep(22,4))
+# ## restant els endo.vals de cada columna
+# dCts3 <- sweep(as.matrix(cts.bySamp), 2, endo.vals3, "-")
+# #comprobamos que los valores del control son casi 0
+# #show(dCts3)
+# #boxplot(t(dCts3))
+# 
+# ## retirem el gen RNU44-001094 de la matriu de dades
+# ## també es retiren la resta de controls RNU48-001006 i U6 snRNA-001973
+# #dim(dCts3) 304 4
+# dCts3 <- dCts3[-which(rownames(dCts3)=="RNU48-001006" | rownames(dCts3)=="U6 snRNA-001973" | rownames(dCts3)=="RNU44-001094"),]
+# #298 4
+# write.csv2(dCts3, file = file.path(resultsDir,"Valores_Ct_Norm_RNU44.csv"),
+#            row.names = TRUE, quote = FALSE)
+@
+
+Se muestra el valor de los datos normalizados por cada miRNA de forma gráfica:
+\begin{enumerate}
+\item \underline{Gen \texttt{RNU48-001006}}.
+%' <<norma3,results='asis',message=FALSE>>=
+%' dCts.byGene <- t(dCts)
+%' #stargazer(dCts.byGene,summary =TRUE,title = "Resumen de los valores una vez normalizados por miRNA")
+%' tabdCtsgene<-compareGroups(dCts.byGene)
+%' tabdCtsgene2<-createTable(tabdCtsgene)
+%' export2latex(tabdCtsgene2,header = c('all'="Mean (SD)"),file = "taula4.tex")
+%' postTexCG("taula4.tex")
+%' @
+%' 
+%' \input{taula4.tex}
+
+<<normaplot2,fig.align='center',fig.width=7>>=
+dCts1.byGene <- t(dCts1)
+boxplot(dCts1.byGene[,c(1:149)], las = 2, col = gene.col, main = "Valores de deltaCt normalizados por RNU48-001006 (I)",cex.axis=0.4)
+boxplot(dCts1.byGene[,c(150:298)], las = 2, col = gene.col, main = "Valores de deltaCt normalizados por RNU48-001006 (II)",cex.axis=0.4)
+@
+
+\item \underline{\texttt{U6 snRNA-001973}}.
+<<normaplot3,fig.align='center',fig.width=7>>=
+dCts2.byGene <- t(dCts2)
+boxplot(dCts2.byGene[,c(1:149)], las = 2, col = gene.col, main = "Valores de deltaCt normalizados por U6 snRNA-001973 (I)",cex.axis=0.4)
+boxplot(dCts2.byGene[,c(150:298)], las = 2, col = gene.col, main = "Valores de deltaCt normalizados por U6 snRNA-001973 (II)",cex.axis=0.4)
+@
+
+\item \underline{\texttt{RNU44-001094}}.
+<<normaplot4,fig.align='center',fig.width=7>>=
+dCts3.byGene <- t(dCts3)
+boxplot(dCts3.byGene[,c(1:149)], las = 2, col = gene.col, main = "Valores de deltaCt normalizados por RNU44-001094 (I)",cex.axis=0.4)
+boxplot(dCts3.byGene[,c(150:298)], las = 2, col = gene.col, main = "Valores de deltaCt normalizados por RNU44-001094 (II)",cex.axis=0.4)
+@
+
+\end{enumerate}
+
+\subsection{Comparaciones}
+En esta sección se describirán los resultados obtenidos al realizar las diferentes comparaciones planteadas. Para cada una de las comparaciones se mostrará el gráfico de cajas para los valores de $\Delta \Delta Ct$ de cada uno de los miRNA, la lista de los 25 primeros miRNA ordenados según el pvalor (los más diferencialmente expresados), junto con la gráfica de RQ.\\
+
+Recordamos las comparaciones del estudio:
+
+\begin{itemize}
+  \item Metastásico vs Control (normalizado con RNU48) = MSU48 - WTU48 
+  \item Metastásico vs Control (normalizado con U6) = MSU6 - WTU6
+  \item Metastásico vs Control (normalizado con RNU44) = MSU44 - WTU44
+\end{itemize}
+\\
+Dado que el miRNA \texttt{RNU44-001094} también puede ser usado como normalizador, también se incluirá la comparación con él, aunque no estuviera incluída en la propuesta.
+
+ \subsubsection{Metastatic vs Control (normalizado con RNU48).}
+Se comparan las muestras del grupo ``Metastásico'' con las del grupo ``Control'' utilizando como normalizador el \texttt{miRNA RNU48}. Se ha utilizado el test estadístico t-student. El gráfico de cajas para los $\Delta \Delta Ct$ de cada uno de los miRNA es el siguiente:
+<<comparacion1>>=
+#Primer doncs, calculem les mitjanes per gen del grup control
+## mirem quines mostres estan implicades (en aquest estudi no faria falta ja que són poques mostres)
+#WT.U48<-which(targets$Group == "WT")
+
+## calculem la mitjana dels controls per cada gen controlan pels NA
+#dCts[ , which(targets$Group == "WT")]
+mean.WT1 <- apply(dCts1[ , which(targets$Group == "WT")], 1, mean, na.rm=TRUE)
+
+#després, calculem les ddCts de les mostres MS restant la mitjana de cada gen control obtinguda just abans
+## mirem quines mostres estan implicades (en aquest estudi no faria falta ja que són poques mostres)
+#MS.U48<-which(targets$Group == "MS")
+
+## calculem el doble delta Ct de cada gen en la comparacio MS - WT controlant pels NA (=40)
+#dCts[ , which(targets$Group == "MS")]
+
+#ddCts.wo.POSTvsBROT.NO <- ifelse(is.na(dCts.wo[ , which(targets2$Group == "POSTBROT.NO")]),40,dCts.wo[ , which(targets2$Group == "POSTBROT.NO")]) - mean.WT
+ddCts1.MSvsWT <-dCts1[ , na.omit(which(targets$Group == "MS"))] - mean.WT1
+@
+
+<<grafddCtComp1,fig.width=7,fig.height=5>>=
+#i procedim a fer els gràfics corresponents pels ddCts
+boxplot(t(ddCts1.MSvsWT)[,c(1:149)], las = 2, col = gene.col, main = "Valores de ddCt. MS vs WT (RNU48) (I)",cex.axis=0.4,cex.main=0.9)
+abline(h = 0, lty = 2)
+
+boxplot(t(ddCts1.MSvsWT)[,c(150:298)], las = 2, col = gene.col, main = "Valores de ddCt. MS vs WT (RNU48) (II)",cex.axis=0.4,cex.main=0.9)
+abline(h = 0, lty = 2)
+
+#grafica parecida hecha a mano
+#mean.ddCts.MSvsWT <- apply(ddCts1.MSvsWT, 1, mean)
+#sd.ddCts.wo.POSTvsBROT.NO <- apply(ddCts.wo.POSTvsBROT.NO, 1, sd)
+#plot(1:length(row.names(ddCts.wo.POSTvsBROT.NO)), mean.ddCts.wo.POSTvsBROT.NO, xaxt='n', 
+#     pch=15, col = gene.col, main = "Mean ddCt values by gene in POSTBROT.NO - BROT.NO", 
+#     ylab = "Mean ddCt (+/-SD)", xlab="", ylim = c(-5,7))
+#axis(1, at = 1:length(row.names(ddCts.wo.POSTvsBROT.NO)), labels = row.names(ddCts.wo.POSTvsBROT.NO), las = 2,cex.axis=0.4)
+#arrows(1:length(row.names(ddCts.wo.POSTvsBROT.NO)), mean.ddCts.wo.POSTvsBROT.NO-sd.ddCts.wo.POSTvsBROT.NO, 
+#       1:length(row.names(ddCts.wo.POSTvsBROT.NO)), mean.ddCts.wo.POSTvsBROT.NO+sd.ddCts.wo.POSTvsBROT.NO, 
+#       length=0.05, angle=90, code=3)
+#abline(h = 0, lty = 2)
+@
+
+<<test>>=
+#Fem els test per veure si els dCts dels grups de la comparació són o no diferents (que equival a veure si els ddCts son o no 0, ja que A==B es pot veure com A-B==0). I aprofitem el loop per registrar els resultats de mean(ddCt), FoldChange (=RQ, =2^-ddCt), i p-valor de cada gen per a aquesta comparació.
+
+## definim els RQs i muntem la taula de resultats (top table)
+mean.ddCts1.MSvsWT <- apply(ddCts1.MSvsWT, 1, mean)
+RQs1 <- 2^-mean.ddCts1.MSvsWT
+
+genes<-rownames(dCts1)
+topTab <- data.frame(ddCt=mean.ddCts1.MSvsWT, RQ=RQs1, pVal=rep(NA,length(genes)),p.adjust=rep(NA,length(genes)))
+#topTab
+
+## i fem el loop del test de student per comparacio de mitjanes per obtenir els p-valors
+
+for (i in 1:nrow(dCts1)){
+  res <- t.test(dCts1[i ,which(targets$Group == "MS")], 
+              dCts1[i , which(targets$Group == "WT")],
+              paired = FALSE,na.action = na.omit)
+  topTab[i,"pVal"] <- res$p.value
+}
+sortTab1 <- topTab[with(topTab, order(pVal)), ]
+#show(sortTab1)
+
+#afegim els pvalors corregits
+p.adjusted<-p.adjust(sortTab1$pVal,"fdr",length(genes))
+sortTab1$p.adjust <- p.adjusted  
+
+## i exportem la taula a fitxer csv
+write.csv2(sortTab1, file = file.path(resultsDir,"topTab_comp1_MSvsWT_NormRNU48.csv"), 
+           row.names = TRUE)
+@
+
+La tabla de los miRNA ordenados según valor creciente de pvalor es la siguiente:
+\newpage
+<<showTop,results='asis'>>=
+sortTab1$pVal<- ifelse(sortTab1$pVal < 0.05, paste0("\\colorbox{thistle}{", round(sortTab1$pVal,5), "}"), round(sortTab1$pVal,5))
+
+#xtable(sortTab[1:25,],digits=5)
+print(xtable(sortTab1[1:25,],digits=5), sanitize.text.function = function(x) x)
+@
+
+Como se puede observar en la tabla anterior, en la comparación MS vs WT, utilizando como miRNA normalizador RNU48, hay 11 miRNAs con un pvalor inferior a 0.05, en cambio no existe ningún miRNA diferencialmente expresado una vez se tienen en cuenta el número de comparaciones realizadas (columna "p.adjust").\\ 
+A continuación se muestra la gráfica conocida como RQ o de "fold change" de las muestras MS relativas a WT. Con un asterísco se marcan aquellos miRNA que tienen un valor del estadístico p inferior a 0.05 (pvalor no ajustado).
+
+<<graficRQ,fig.width=9,fig.height=7>>=
+#Per acabar, grafiquem els RQ
+## fer el grafic
+plot(1:length(names(RQs1)), RQs1, xaxt='n', log = "y", ylim = c(0.1, 10), 
+     pch=15, col = gene.col, main = "Valor de RQ en MSvsWT (RNU48)", 
+     ylab = "RQ", xlab="")
+abline(h = 1, lty = 2)
+axis(1, at = 1:length(row.names(ddCts1.MSvsWT)), labels = row.names(ddCts1.MSvsWT), las = 2,cex.axis=0.4)
+arrows(1:length(names(RQs1)), RQs1, 
+       1:length(names(RQs1)), 1, 
+       length=0, lwd = 4, col = gene.col, angle=90, code=3)
+pos.x <- which(topTab$pVal<0.05 & topTab$ddCt<0) # els de ddCt negatiu seran els de FC positiu
+neg.x <- which(topTab$pVal<0.05 & topTab$ddCt>0) # els de ddCt negatiu seran els de FC negatiu
+pos.y <- RQs1[pos.x]+0.5
+neg.y <- RQs1[neg.x]-0.5
+##per colocar el "*" en cada barra que 
+#if (length(pos.x)>0) {text(pos.x, y = pos.y, "*")}
+if (length(pos.x)>0) {text(pos.x, y = 0.95, "*")}
+#if (length(neg.x)>0) {text(neg.x, y = neg.y, "*")}
+if (length(neg.x)>0) {text(neg.x, y = 1.05, "*")}
+@
+
+<<pdf1,results='hide'>>=
+pdf(file.path(resultsDir,"RQplotRNU48.pdf"))
+plot(1:length(names(RQs1)), RQs1, xaxt='n', log = "y", ylim = c(0.1, 10), 
+     pch=15, col = gene.col, main = "Valor de RQ en MSvsWT (RNU48)", 
+     ylab = "RQ", xlab="")
+abline(h = 1, lty = 2)
+axis(1, at = 1:length(row.names(ddCts1.MSvsWT)), labels = row.names(ddCts1.MSvsWT), las = 2,cex.axis=0.4)
+arrows(1:length(names(RQs1)), RQs1, 
+       1:length(names(RQs1)), 1, 
+       length=0, lwd = 4, col = gene.col, angle=90, code=3)
+pos.x <- which(topTab$pVal<0.05 & topTab$ddCt<0) # els de ddCt negatiu seran els de FC positiu
+neg.x <- which(topTab$pVal<0.05 & topTab$ddCt>0) # els de ddCt negatiu seran els de FC negatiu
+pos.y <- RQs1[pos.x]+0.5
+neg.y <- RQs1[neg.x]-0.5
+##per colocar el "*" en cada barra que 
+#if (length(pos.x)>0) {text(pos.x, y = pos.y, "*")}
+if (length(pos.x)>0) {text(pos.x, y = 0.95, "*")}
+#if (length(neg.x)>0) {text(neg.x, y = neg.y, "*")}
+if (length(neg.x)>0) {text(neg.x, y = 1.05, "*")}
+dev.off()
+@
+\newpage
+
+\subsubsection{Metastatic vs Control (normalizado con U6 snRNA-001973)}
+Se comparan las muestras del grupo ``Metastasico'' con las del grupo ``Control'' utilizando como normalizador el miRNA \texttt{U6  snRNA-001973}. Se ha utilizado el test estadístico t-student. El gráfico de cajas para los $\Delta \Delta Ct$ de cada uno de los miRNA es el siguiente:
+<<comparacion2>>=
+#Primer doncs, calculem les mitjanes per gen del grup control
+## mirem quines mostres estan implicades (en aquest estudi no faria falta ja que són poques mostres)
+#WT.U6<-which(targets$Group == "WT")
+
+## calculem la mitjana dels controls per cada gen controlan pels NA
+#dCts[ , which(targets$Group == "WT")]
+mean.WT2 <- apply(dCts2[ , which(targets$Group == "WT")], 1, mean, na.rm=TRUE)
+
+
+#després, calculem les ddCts de les mostres MS restant la mitjana de cada gen control obtinguda just abans
+## mirem quines mostres estan implicades (en aquest estudi no faria falta ja que són poques mostres)
+#MS.U6<-which(targets$Group == "MS")
+
+## calculem el doble delta Ct de cada gen en la comparacio MS - WT controlant pels NA (=40)
+#dCts[ , which(targets$Group == "MS")]
+
+#ddCts.wo.POSTvsBROT.NO <- ifelse(is.na(dCts.wo[ , which(targets2$Group == "POSTBROT.NO")]),40,dCts.wo[ , which(targets2$Group == "POSTBROT.NO")]) - mean.WT
+ddCts2.MSvsWT<-dCts2[ , na.omit(which(targets$Group == "MS"))] - mean.WT2
+@
+
+<<graficsddCtw,fig.width=7,fig.height=5>>=
+#i procedim a fer els gràfics corresponents pels ddCts
+boxplot(t(ddCts2.MSvsWT)[,c(1:149)], las = 2, col = gene.col, main = "Valores de ddCt. MS vs WT (U6 snRNA) (I)",cex.axis=0.4,cex.main=0.9)
+abline(h = 0, lty = 2)
+
+boxplot(t(ddCts2.MSvsWT)[,c(150:298)], las = 2, col = gene.col, main = "Valores de ddCt. MS vs WT (U6 snRNA) (II)",cex.axis=0.4,cex.main=0.9)
+abline(h = 0, lty = 2)
+
+#grafica parecida hecha a mano
+#mean.ddCts.MSvsWT.U6 <- apply(ddCts.MSvsWT.U6, 1, mean)
+#sd.ddCts.wo.POSTvsBROT.NO <- apply(ddCts.wo.POSTvsBROT.NO, 1, sd)
+#plot(1:length(row.names(ddCts.wo.POSTvsBROT.NO)), mean.ddCts.wo.POSTvsBROT.NO, xaxt='n', 
+#     pch=15, col = gene.col, main = "Mean ddCt values by gene in POSTBROT.NO - BROT.NO", 
+#     ylab = "Mean ddCt (+/-SD)", xlab="", ylim = c(-5,7))
+#axis(1, at = 1:length(row.names(ddCts.wo.POSTvsBROT.NO)), labels = row.names(ddCts.wo.POSTvsBROT.NO), las = 2,cex.axis=0.4)
+#arrows(1:length(row.names(ddCts.wo.POSTvsBROT.NO)), mean.ddCts.wo.POSTvsBROT.NO-sd.ddCts.wo.POSTvsBROT.NO, 
+#       1:length(row.names(ddCts.wo.POSTvsBROT.NO)), mean.ddCts.wo.POSTvsBROT.NO+sd.ddCts.wo.POSTvsBROT.NO, 
+#       length=0.05, angle=90, code=3)
+#abline(h = 0, lty = 2)
+@
+
+<<test2>>=
+#Fem els test per veure si els dCts dels grups de la comparació són o no diferents (que equival a veure si els ddCts son o no 0, ja que A==B es pot veure com A-B==0). I aprofitem el loop per registrar els resultats de mean(ddCt), FoldChange (=RQ, =2^-ddCt), i p-valor de cada gen per a aquesta comparació.
+
+## definim els RQs i muntem la taula de resultats (top table)
+mean.ddCts2.MSvsWT <- apply(ddCts2.MSvsWT, 1, mean)
+RQs2 <- 2^-mean.ddCts2.MSvsWT
+
+genes<-rownames(dCts2)
+topTab2 <- data.frame(ddCt=mean.ddCts2.MSvsWT, RQ=RQs2, pVal=rep(NA,length(genes)))
+#topTab
+
+## i fem el loop del test de student per comparacio de mitjanes per obtenir els p-valors
+
+for (i in 1:nrow(dCts2)){
+  res <- t.test(dCts2[i ,which(targets$Group == "MS")], 
+              dCts2[i , which(targets$Group == "WT")],
+              paired = FALSE,na.action = na.omit)
+  topTab2[i,"pVal"] <- res$p.value
+}
+sortTab2 <- topTab2[with(topTab2, order(pVal)), ]
+
+#afegim els pvalors corregits
+p.adjusted<-p.adjust(sortTab2$pVal,"fdr",length(genes))
+sortTab2$p.adjust <- p.adjusted  
+
+## i exportem la taula a fitxer csv
+write.csv2(sortTab2, file = file.path(resultsDir,"topTab_comp2_MSvsWT_NormU6snRNA.csv"), 
+           row.names = TRUE)
+@
+\\
+\\
+La tabla de los miRNA ordenados según valor creciente de pvalor es la siguiente:
+\newpage
+<<showTop2,results='asis'>>=
+sortTab2$pVal<- ifelse(sortTab2$pVal < 0.05, paste0("\\colorbox{thistle}{", round(sortTab2$pVal,5), "}"), round(sortTab2$pVal,5))
+
+#xtable(sortTab[1:25,],digits=5)
+print(xtable(sortTab2[1:25,],digits=5), sanitize.text.function = function(x) x)
+@
+
+
+Al normalizar con \texttt{U6 snRNA} el número de miRNA con un pvalor inferior a 0.05, es de 8. Una vez se tiene en cuenta el número de comparaciones realizadas (columna "p.adjust"), no existe ningún miRNA diferencialmente expresado.\\
+A continuación se muestra la gráfica conocida como RQ o de "fold change".
+
+<<graficRQ2,fig.width=9,fig.height=7>>=
+#Per acabar, grafiquem els RQ
+plot(1:length(names(RQs2)), RQs2, xaxt='n', log = "y", ylim = c(0.1, 10), 
+     pch=15, col = gene.col, main = "Valor de RQ en MSvsWT (U6 snRNA)", 
+     ylab = "RQ", xlab="")
+abline(h = 1, lty = 2)
+axis(1, at = 1:length(row.names(ddCts2.MSvsWT)), labels = row.names(ddCts2.MSvsWT), las = 2,cex.axis=0.4)
+arrows(1:length(names(RQs2)), RQs2, 
+       1:length(names(RQs2)), 1, 
+       length=0, lwd = 4, col = gene.col, angle=90, code=3)
+pos.x <- which(topTab2$pVal<0.05 & topTab2$ddCt<0) # els de ddCt negatiu seran els de FC positiu
+neg.x <- which(topTab2$pVal<0.05 & topTab2$ddCt>0) # els de ddCt negatiu seran els de FC negatiu
+pos.y <- RQs2[pos.x]+0.5
+neg.y <- RQs2[neg.x]-0.5
+##per colocar el "*" en cada barra que 
+#if (length(pos.x)>0) {text(pos.x, y = pos.y, "*")}
+if (length(pos.x)>0) {text(pos.x, y = 0.95, "*")}
+#if (length(neg.x)>0) {text(neg.x, y = neg.y, "*")}
+if (length(neg.x)>0) {text(neg.x, y = 1.05, "*")}
+@
+
+<<pdf2,results='hide'>>=
+pdf(file.path(resultsDir,"RQplotU6.pdf"))
+plot(1:length(names(RQs2)), RQs2, xaxt='n', log = "y", ylim = c(0.1, 10), 
+     pch=15, col = gene.col, main = "Valor de RQ en MSvsWT (U6 snRNA)", 
+     ylab = "RQ", xlab="")
+abline(h = 1, lty = 2)
+axis(1, at = 1:length(row.names(ddCts2.MSvsWT)), labels = row.names(ddCts2.MSvsWT), las = 2,cex.axis=0.4)
+arrows(1:length(names(RQs2)), RQs2, 
+       1:length(names(RQs2)), 1, 
+       length=0, lwd = 4, col = gene.col, angle=90, code=3)
+pos.x <- which(topTab2$pVal<0.05 & topTab2$ddCt<0) # els de ddCt negatiu seran els de FC positiu
+neg.x <- which(topTab2$pVal<0.05 & topTab2$ddCt>0) # els de ddCt negatiu seran els de FC negatiu
+pos.y <- RQs2[pos.x]+0.5
+neg.y <- RQs2[neg.x]-0.5
+##per colocar el "*" en cada barra que 
+#if (length(pos.x)>0) {text(pos.x, y = pos.y, "*")}
+if (length(pos.x)>0) {text(pos.x, y = 0.95, "*")}
+#if (length(neg.x)>0) {text(neg.x, y = neg.y, "*")}
+if (length(neg.x)>0) {text(neg.x, y = 1.05, "*")}
+dev.off()
+@
+
+\newpage
+
+\subsubsection{Metastatic vs Control (normalizado con RNU44)}
+Se comparan las muestras del grupo ``Metastasico'' con las del grupo ``Control'' utilizando como normalizador el miRNA \texttt{RNU44}. Se ha utilizado el test estadístico t-student. El gráfico de cajas para los $\Delta \Delta Ct$ de cada uno de los miRNA es el siguiente:
+
+<<comparacion3>>=
+#Primer doncs, calculem les mitjanes per gen del grup control
+## mirem quines mostres estan implicades (en aquest estudi no faria falta ja que són poques mostres)
+#WT.U44<-which(targets$Group == "WT")
+
+## calculem la mitjana dels controls per cada gen controlan pels NA
+#dCts[ , which(targets$Group == "WT")]
+mean.WT3 <- apply(dCts3[ , which(targets$Group == "WT")], 1, mean, na.rm=TRUE)
+
+
+#després, calculem les ddCts de les mostres MS restant la mitjana de cada gen control obtinguda just abans
+## mirem quines mostres estan implicades (en aquest estudi no faria falta ja que són poques mostres)
+#MS.U44<-which(targets$Group == "MS")
+
+## calculem el doble delta Ct de cada gen en la comparacio MS - WT controlant pels NA (=40)
+#dCts[ , which(targets$Group == "MS")]
+
+#ddCts.wo.POSTvsBROT.NO <- ifelse(is.na(dCts.wo[ , which(targets2$Group == "POSTBROT.NO")]),40,dCts.wo[ , which(targets2$Group == "POSTBROT.NO")]) - mean.WT
+ddCts3.MSvsWT <-dCts3[ , na.omit(which(targets$Group == "MS"))] - mean.WT3
+
+@
+
+<<graficsddCthree,fig.width=7,fig.height=5>>=
+#i procedim a fer els gràfics corresponents pels ddCts
+boxplot(t(ddCts3.MSvsWT)[,c(1:149)], las = 2, col = gene.col, main = "Valores de ddCt. MS vs WT (RNU44) (I)",cex.axis=0.4,cex.main=0.9)
+abline(h = 0, lty = 2)
+
+boxplot(t(ddCts3.MSvsWT)[,c(150:298)], las = 2, col = gene.col, main = "Valores de ddCt. MS vs WT (RNU44) (II)",cex.axis=0.4,cex.main=0.9)
+abline(h = 0, lty = 2)
+
+#grafica parecida hecha a mano
+#mean.ddCts.MSvsWT.U44 <- apply(ddCts.MSvsWT.U44, 1, mean)
+#sd.ddCts.wo.POSTvsBROT.NO <- apply(ddCts.wo.POSTvsBROT.NO, 1, sd)
+#plot(1:length(row.names(ddCts.wo.POSTvsBROT.NO)), mean.ddCts.wo.POSTvsBROT.NO, xaxt='n', 
+#     pch=15, col = gene.col, main = "Mean ddCt values by gene in POSTBROT.NO - BROT.NO", 
+#     ylab = "Mean ddCt (+/-SD)", xlab="", ylim = c(-5,7))
+#axis(1, at = 1:length(row.names(ddCts.wo.POSTvsBROT.NO)), labels = row.names(ddCts.wo.POSTvsBROT.NO), las = 2,cex.axis=0.4)
+#arrows(1:length(row.names(ddCts.wo.POSTvsBROT.NO)), mean.ddCts.wo.POSTvsBROT.NO-sd.ddCts.wo.POSTvsBROT.NO, 
+#       1:length(row.names(ddCts.wo.POSTvsBROT.NO)), mean.ddCts.wo.POSTvsBROT.NO+sd.ddCts.wo.POSTvsBROT.NO, 
+#       length=0.05, angle=90, code=3)
+#abline(h = 0, lty = 2)
+@
+
+<<test3>>=
+#Fem els test per veure si els dCts dels grups de la comparació són o no diferents (que equival a veure si els ddCts son o no 0, ja que A==B es pot veure com A-B==0). I aprofitem el loop per registrar els resultats de mean(ddCt), FoldChange (=RQ, =2^-ddCt), i p-valor de cada gen per a aquesta comparació.
+
+## definim els RQs i muntem la taula de resultats (top table)
+mean.ddCts3.MSvsWT <- apply(ddCts3.MSvsWT, 1, mean)
+RQs3 <- 2^-mean.ddCts3.MSvsWT
+#genes <- gene.names[-which(gene.names=="Ppia")]
+genes<-rownames(dCts3)
+topTab3 <- data.frame(ddCt=mean.ddCts3.MSvsWT, RQ=RQs3, pVal=rep(NA,length(genes)))
+
+## i fem el loop del test de student per comparacio de mitjanes per obtenir els p-valors
+
+for (i in 1:nrow(dCts3)){
+  res <- t.test(dCts3[i ,which(targets$Group == "MS")], 
+              dCts3[i , which(targets$Group == "WT")],
+              paired = FALSE,na.action = na.omit)
+  topTab3[i,"pVal"] <- res$p.value
+}
+sortTab3 <- topTab3[with(topTab3, order(pVal)), ]
+#show(sortTab3)
+
+#afegim els pvalors corregits
+p.adjusted<-p.adjust(sortTab3$pVal,"fdr",length(genes))
+sortTab3$p.adjust <- p.adjusted  
+
+## i exportem la taula a fitxer csv
+write.csv2(sortTab3, file = file.path(resultsDir,"topTab_comp3_MSvsWT_NormRNU44.csv"), 
+            row.names = TRUE)
+@
+
+La tabla de los miRNA ordenados según valor creciente de pvalor es la siguiente:
+<<showTop3,results='asis'>>=
+sortTab3$pVal<- ifelse(sortTab3$pVal < 0.05, paste0("\\colorbox{thistle}{", round(sortTab3$pVal,5), "}"), round(sortTab3$pVal,5))
+
+#xtable(sortTab[1:25,],digits=5)
+print(xtable(sortTab3[1:25,],digits=5), sanitize.text.function = function(x) x)
+@
+\newpage
+Al normalizar con \texttt{RNU44} el número de miRNA con un pvalor sin ajustar inferior a 0.05, es de 22. Una vez se tienen en cuenta el número de comparaciones realizadas, no hay ningún miRNA expresado de forma diferencial.\\
+
+
+A continuación se muestra la gráfica conocida como RQ o de "fold change" de las muestras MS relativas a WT. Con un asterísco se marcan a aquellos miRNA con un pvalor sin ajustar inferior a 0.05.
+
+<<graficRQ3,fig.width=9,fig.height=7>>=
+#Per acabar, grafiquem els RQ
+## fer el grafic
+plot(1:length(names(RQs3)), RQs3, xaxt='n', log = "y", ylim = c(0.1, 10), 
+     pch=15, col = gene.col, main = "Valor de RQ en MSvsWT (RNU44)", 
+     ylab = "RQ", xlab="")
+abline(h = 1, lty = 2)
+axis(1, at = 1:length(row.names(ddCts3.MSvsWT)), labels = row.names(ddCts3.MSvsWT), las = 2,cex.axis=0.4)
+arrows(1:length(names(RQs3)), RQs3, 
+       1:length(names(RQs3)), 1, 
+       length=0, lwd = 4, col = gene.col, angle=90, code=3)
+pos.x <- which(topTab3$pVal<0.05 & topTab3$ddCt<0) # els de ddCt negatiu seran els de FC positiu
+neg.x <- which(topTab3$pVal<0.05 & topTab3$ddCt>0) # els de ddCt negatiu seran els de FC negatiu
+pos.y <- RQs3[pos.x]+0.5
+neg.y <- RQs3[neg.x]-0.5
+##per colocar el "*" en cada barra que 
+#if (length(pos.x)>0) {text(pos.x, y = pos.y, "*")}
+if (length(pos.x)>0) {text(pos.x, y = 0.95, "*")}
+#if (length(neg.x)>0) {text(neg.x, y = neg.y, "*")}
+if (length(neg.x)>0) {text(neg.x, y = 1.05, "*")}
+@
+
+<<pdf3,results='hide'>>=
+pdf(file.path(resultsDir,"RQplotRNU44.pdf"))
+plot(1:length(names(RQs3)), RQs3, xaxt='n', log = "y", ylim = c(0.1, 10), 
+     pch=15, col = gene.col, main = "Valor de RQ en MSvsWT (RNU44)", 
+     ylab = "RQ", xlab="")
+abline(h = 1, lty = 2)
+axis(1, at = 1:length(row.names(ddCts3.MSvsWT)), labels = row.names(ddCts3.MSvsWT), las = 2,cex.axis=0.4)
+arrows(1:length(names(RQs3)), RQs3, 
+       1:length(names(RQs3)), 1, 
+       length=0, lwd = 4, col = gene.col, angle=90, code=3)
+pos.x <- which(topTab3$pVal<0.05 & topTab3$ddCt<0) # els de ddCt negatiu seran els de FC positiu
+neg.x <- which(topTab3$pVal<0.05 & topTab3$ddCt>0) # els de ddCt negatiu seran els de FC negatiu
+pos.y <- RQs3[pos.x]+0.5
+neg.y <- RQs3[neg.x]-0.5
+##per colocar el "*" en cada barra que 
+#if (length(pos.x)>0) {text(pos.x, y = pos.y, "*")}
+if (length(pos.x)>0) {text(pos.x, y = 0.95, "*")}
+#if (length(neg.x)>0) {text(neg.x, y = neg.y, "*")}
+if (length(neg.x)>0) {text(neg.x, y = 1.05, "*")}
+dev.off()
+@
+\newpage
+%---------------------------------------------------------------------------------------
+\section{Conclusiones}
+%-----------------------------------------------------------------------------------------------------------------
+En este estudio se han analizado 8 placas de 384 pocillos de la tecnología qPCR de la casa comercial Applied Biosystems. \textbf{Es conveniente tener en cuenta que el número de muestras utilizado en cada grupo es extremadamente bajo, por lo que los resultados han de ser tomados con mucha precaución.}
+En el control de calidad realizado se ha visto que existían muchos miRNAs con un valor de \texttt{Ct} demasiado alto (baja expresión de los miRNAs) y un valor de \texttt{amplification score} bajo. Los miRNas que presentaban estas características no se han utilizado en el estudio. Asimismo, todos aquellos miRNAs donde no se ha detectado expresión en alguna de las muestras, tampoco se han utilizado. Esto ha dejado un total de \textbf{298 miRNAs} para el estudio.\\
+Se ha observado que el mejor miRNA de los propuestos por la investigadora, para utilizar como gen normalizador es el \texttt{RNU48}, aún así, se ha realizado el estudio utilizando los tres normalizadores disponibles.\\
+Se han realizado tres comparaciones con las muestras que han generado el siguiente número de miRNA con un pvalor sin ajustar inferior a 0.05.:
+\begin{enumerate}
+  \item Metastásico vs Control (normalizado con RNU48): 11 miRNAs
+  \item Metastásico vs Control (normalizado con U6): 8 miRNAs
+  \item Metastásico vs Control (normalizado con RNU44): 22 miRNAs
+\end{enumerate}
+
+Una vez se corrige el pvalor por el número de comparaciones realizadas, \textbf{no hay ningún miRNA que esté diferencialmente expresado}.
+%-----------------------------------------------------------------------------------------------------------------
+
+\section{Otras consideraciones}
+
+\newline
+\textbf{Para poder evaluar la utilidad del resultado de nuestro trabajo os rogamos que nos informéis de los productos científicos como consecuencia de los mismos (comunicaciones, artículos, tesis, etc.) Así mismo nos gustaría que incluyerais el siguiente párrafo en el apartado de agradecicimentos de tus manuscritos.}\\
+
+\textbf{El análisis estadístico ha sido llevado a cabo en la Unidad de Estadística y Bioinformática (UEB) del Instituto de Investigación del Hospital de Vall Hebrón (VHIR).}
+\newpage
+\bibliography{qPCR}
+\end{document}
