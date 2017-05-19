@@ -2,10 +2,12 @@
 #no se resta la primera columna
 #se controla el grosor de las líneas de las etiquetas (segment.size)
 #se controla el tamaño de las etiquetas (size=1.5)
+#se puede seleccionar los colores de los puntos:scale_color_manual
+#colores <- vector con el color de cada factor de forma ordenada
 require(ggplot2)
 require(ggrepel)
 
-plotPCA3 <- function (datos, labels, factor,title,scale) {
+plotPCA3 <- function (datos, labels, factor,title,scale,colores) {
   data <- prcomp(t(datos),scale=scale)
   #ajustos del gràfic
   dataDf <- data.frame(data$x)
@@ -22,5 +24,6 @@ plotPCA3 <- function (datos, labels, factor,title,scale) {
   p1 + geom_text_repel(aes(y = PC2 + 0.25, label = labels),segment.size = 0.25,size=1.5) + 
     labs(x = c(paste("PC1",loads[1],"%")),y=c(paste("PC2",loads[2],"%"))) +  
     ggtitle(paste("Principal Component Analysis for:",title,sep=" "))+ 
-    theme(plot.title = element_text(hjust = 0.5))
-}
+    theme(plot.title = element_text(hjust = 0.5)) +
+    scale_color_manual(values=colores)
+  }
