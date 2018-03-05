@@ -22,7 +22,8 @@ plotPCA3 <- function (datos, labels, factor,title,scale,colores, size = 1.5, gli
     geom_hline(yintercept = 0, color = "gray70") +
     geom_vline(xintercept = 0, color = "gray70") +
     geom_point(aes(color = Group), alpha = 0.55, size = 3) +
-    coord_cartesian(xlim = c(min(data$x[,1])-5,max(data$x[,1])+5))
+    coord_cartesian(xlim = c(min(data$x[,1])-5,max(data$x[,1])+5)) +
+    scale_fill_discrete(name = "Group")
   # the graphic with ggrepel
   p1 + geom_text_repel(aes(y = PC2 + 0.25, label = labels),segment.size = 0.25,size=1.5) + 
     labs(x = c(paste("PC1",loads[1],"%")),y=c(paste("PC2",loads[2],"%"))) +  
