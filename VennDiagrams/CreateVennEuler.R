@@ -12,15 +12,16 @@
 #colors = si volem colors adhoc (sino fa rainbow)
 #trans = transparencia dels colors
 #cex1 = tamaño de las etiquetas
+#cex2 = tamaño de los números
 #rotation = rotación del venn en global
 #position = vector con las posiciones en grados de cada etiqueta de comparación
-#cex2 = tamaño de los números
+
 
 createVennEuler <- function(topTabs, compNames, label = "selected", colFeat = "X", 
                             colPVal = "P.Value", pval = 0.05, pltR = TRUE, 
                             pltPdf = TRUE, venn = TRUE, eul = TRUE, csv = TRUE, 
                             colors = rainbow(length(compNames)), trans = 0.5, 
-                            cex1 = 0.75, rotation, position, cex2 = 1){
+                            cex1 = 0.55, rotation = 0, position, cex2 = 0.5){
   
   ## Initializing lists
   list_genes_sel <- list()
