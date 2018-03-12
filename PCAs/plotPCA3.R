@@ -25,7 +25,7 @@ plotPCA3 <- function (datos, labels, factor,title,scale,colores, size = 1.5, gli
     coord_cartesian(xlim = c(min(data$x[,1])-5,max(data$x[,1])+5)) +
     scale_fill_discrete(name = "Group")
   # the graphic with ggrepel
-  p1 + geom_text_repel(aes(y = PC2 + 0.25, label = labels),segment.size = 0.25,size=1.5) + 
+  p1 + geom_text_repel(aes(y = PC2 + 0.25, label = labels),segment.size = 0.25,size=size) + 
     labs(x = c(paste("PC1",loads[1],"%")),y=c(paste("PC2",loads[2],"%"))) +  
     ggtitle(paste("Principal Component Analysis for: ",title,sep=" "))+ 
     theme(plot.title = element_text(hjust = 0.5)) +
