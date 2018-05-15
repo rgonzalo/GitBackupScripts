@@ -52,7 +52,7 @@ createVennEuler <- function(topTabs, compNames, label = "selected", colFeat = "X
                               rotation.degree = rotation,
                               cat.pos = position)
     if (pltPdf) {
-      pdf(paste0("VennDiagram.", label, ".", colPVal, pval, "logFC",FC,".pdf"))
+      pdf(paste0("VennDiagram", label, colPVal, pval, "logFC",FC,".pdf"))
       grid.draw(venn.plot)
       dev.off()
     }
@@ -95,7 +95,7 @@ createVennEuler <- function(topTabs, compNames, label = "selected", colFeat = "X
   ## Writing table of shared elements as csv
   if (csv) {
     WriteXLS(sharedElements, ExcelFileName = paste0("sharedElements.", label, ".", 
-                                                    colPVal, pval, ".xls"), 
+                                                    colPVal, pval,".logFC",FC,".xls"), 
              row.names = FALSE)
   }
   
