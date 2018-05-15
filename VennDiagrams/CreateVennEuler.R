@@ -1,3 +1,6 @@
+###Plot Venn diagramm from 2 to 5 comparisons
+###Function based in previous work of Ferran Briansó and Miriam Mota
+###Parameters available to tune:
 #topTabs = lista de los data.frame con las toptables
 #compNames = lista con los nombres de cada comparación
 #label = nombre que quieres que salga en el archivo
@@ -22,7 +25,7 @@ createVennEuler <- function(topTabs, compNames, label = "selected", colFeat = "X
                             colPVal = "P.Value", pval = 0.05, pltR = TRUE, 
                             pltPdf = TRUE, venn = TRUE, eul = TRUE, csv = TRUE, 
                             colors = rainbow(length(compNames)), trans = 0.5, 
-                            cex1 = 0.75, rotation, position, cex2 = 1, FC = 1){
+                            cex1 = 0.75, rotation, position, cex2 = 1, FC){
   
   ## Initializing lists
   list_genes_sel <- list()
@@ -32,7 +35,7 @@ createVennEuler <- function(topTabs, compNames, label = "selected", colFeat = "X
     colpval <- which(names(topTabs[[i]]) == colPVal)
     colFC <- which(names(topTabs[[i]]) == "logFC")
     colFeature <- which(names(topTabs[[i]]) == colFeat)
-    list_genes_sel[[i]] <- as.character(topTabs[[i]][, colFeat][topTabs[[i]][, colpval] < pval & topTabs[[i]][, colFC] >= abs(FC)])
+    list_genes_sel[[i]] <- as.character(topTabs[[i]][, colFeat][topTabs[[i]][, colpval] < pval & abs(topTabs[[i]][, colFC]) >= FC])
   }
   
   ## Creating Venn Diagram
@@ -44,7 +47,7 @@ createVennEuler <- function(topTabs, compNames, label = "selected", colFeat = "X
                               resolution = 800,
                               cat.cex = cex1,
                               cex = cex2,
-                              main = paste0("Venn diagram ", compNames, " (" , colPVal, " < ", pval," & logFC >", FC, ")"),
+                              main = paste0("Venn diagram ", compNames, " (" , colPVal, " < ", pval," & logFC > ", FC, ")"),
                               filename = NULL,
                               rotation.degree = rotation,
                               cat.pos = position)
