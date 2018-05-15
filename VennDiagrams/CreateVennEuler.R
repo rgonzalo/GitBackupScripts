@@ -92,7 +92,7 @@ createVennEuler <- function(topTabs, compNames, label = "selected", colFeat = "X
   ## Writing table of shared elements as csv
   if (csv) {
     WriteXLS(sharedElements, ExcelFileName = paste0("sharedElements.", label, ".", 
-                                                    colPVal, pval, ".csv"), 
+                                                    colPVal, pval, ".xls"), 
              row.names = FALSE)
   }
   
