@@ -15,13 +15,14 @@
 #cex2 = tamaño de los números
 #rotation = rotación del venn en global
 #position = vector con las posiciones en grados de cada etiqueta de comparación
+#FC = valor de logFC para seleccionar genes
 
 
 createVennEuler <- function(topTabs, compNames, label = "selected", colFeat = "X", 
                             colPVal = "P.Value", pval = 0.05, pltR = TRUE, 
                             pltPdf = TRUE, venn = TRUE, eul = TRUE, csv = TRUE, 
                             colors = rainbow(length(compNames)), trans = 0.5, 
-                            cex1 = 0.55, rotation = 0, position, cex2 = 0.5){
+                            cex1 = 0.75, rotation, position, cex2 = 1, FC = 1){
   
   ## Initializing lists
   list_genes_sel <- list()
@@ -29,8 +30,9 @@ createVennEuler <- function(topTabs, compNames, label = "selected", colFeat = "X
   ## Reading input data
   for (i in 1:length(topTabs)) {
     colpval <- which(names(topTabs[[i]]) == colPVal)
+    colFC <- which(names(topTabs[[i]]) == "logFC")
     colFeature <- which(names(topTabs[[i]]) == colFeat)
-    list_genes_sel[[i]] <- as.character(topTabs[[i]][, colFeat][topTabs[[i]][, colpval] < pval])
+    list_genes_sel[[i]] <- as.character(topTabs[[i]][, colFeat][topTabs[[i]][, colpval] < pval & topTabs[[i]][, colFC] >= abs(FC)])
   }
   
   ## Creating Venn Diagram
@@ -42,12 +44,12 @@ createVennEuler <- function(topTabs, compNames, label = "selected", colFeat = "X
                               resolution = 800,
                               cat.cex = cex1,
                               cex = cex2,
-                              main = paste0("Venn diagram (" , colPVal, " < ", pval,")"),
+                              main = paste0("Venn diagram ", compNames, " (" , colPVal, " < ", pval," & logFC >", FC, ")"),
                               filename = NULL,
                               rotation.degree = rotation,
                               cat.pos = position)
     if (pltPdf) {
-      pdf(paste0("VennDiagram.", label, ".", colPVal, pval, ".pdf"))
+      pdf(paste0("VennDiagram.", label, ".", colPVal, pval, "logFC",FC,".pdf"))
       grid.draw(venn.plot)
       dev.off()
     }
@@ -89,9 +91,9 @@ createVennEuler <- function(topTabs, compNames, label = "selected", colFeat = "X
   
   ## Writing table of shared elements as csv
   if (csv) {
-    write.csv(sharedElements,
-              file = paste0("sharedElements.", label, ".", colPVal, pval, ".csv"), 
-              row.names = FALSE)
+    WriteXLS(sharedElements, ExcelFileName = paste0("sharedElements.", label, ".", 
+                                                    colPVal, pval, ".csv"), 
+             row.names = FALSE)
   }
   
   ## Returning table as data.frame
