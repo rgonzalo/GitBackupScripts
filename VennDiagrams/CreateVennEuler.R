@@ -47,7 +47,7 @@ createVennEuler <- function(topTabs, compNames, label = "selected", colFeat = "X
                               resolution = 800,
                               cat.cex = cex1,
                               cex = cex2,
-                              main = paste0("Venn diagram ", compNames, " (" , colPVal, " < ", pval," & logFC > ", FC, ")"),
+                              main = paste0("Venn diagram ", label, " (" , colPVal, " < ", pval," & logFC > ", FC, ")"),
                               filename = NULL,
                               rotation.degree = rotation,
                               cat.pos = position)
@@ -94,8 +94,7 @@ createVennEuler <- function(topTabs, compNames, label = "selected", colFeat = "X
   
   ## Writing table of shared elements as csv
   if (csv) {
-    WriteXLS(sharedElements, ExcelFileName = paste0("sharedElements.", label, ".", 
-                                                    colPVal, pval,".logFC",FC,".xls"), 
+    WriteXLS(sharedElements, ExcelFileName = paste0("sharedElements.", label, ".", colPVal, pval,".logFC",FC,".xls"), 
              row.names = FALSE)
   }
   
